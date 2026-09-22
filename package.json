@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "format": "prettier --write app package.json README.md AGENTS.md CLAUDE.md jsconfig.json next.config.mjs eslint.config.mjs"
   },
   "dependencies": {
     "next": "16.3.5",
@@ -15,6 +16,7 @@
   },
   "devDependencies": {
     "eslint": "^9",
-    "eslint-config-next": "16.3.5"
+    "eslint-config-next": "16.3.5",
+    "prettier": "3.5.3"
   }
 }

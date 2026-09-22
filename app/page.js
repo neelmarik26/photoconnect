@@ -359,10 +359,21 @@ export default function Home() {
                 ))}
               </div>
               <div className={styles.profileFacts}>
-                <p><b>Location</b>{selectedPhotographer.location}</p>
-                <p><b>Profession</b>Event Photographer</p>
-                <p><b>Experience</b>{selectedPhotographer.experience || "5+ years"}</p>
-                <p><b>Languages</b>{selectedPhotographer.languages || "English, Hindi"}</p>
+                <p>
+                  <b>Location</b>
+                  {selectedPhotographer.location}
+                </p>
+                <p>
+                  <b>Profession</b>Event Photographer
+                </p>
+                <p>
+                  <b>Experience</b>
+                  {selectedPhotographer.experience || "5+ years"}
+                </p>
+                <p>
+                  <b>Languages</b>
+                  {selectedPhotographer.languages || "English, Hindi"}
+                </p>
                 <a href="#portfolio">View Full Portfolio ↗</a>
               </div>
             </div>
@@ -373,19 +384,36 @@ export default function Home() {
                   <p>Professional Photographer</p>
                 </div>
                 <span className={styles.approved}>✓ Approved</span>
-                <button className={styles.profileHeart} aria-label="Save profile">♡</button>
+                <button
+                  className={styles.profileHeart}
+                  aria-label="Save profile"
+                >
+                  ♡
+                </button>
               </div>
-              <p className={styles.profileLocation}>● {selectedPhotographer.location}</p>
+              <p className={styles.profileLocation}>
+                ● {selectedPhotographer.location}
+              </p>
               <div className={styles.profileStats}>
-                <span>★ <b>{selectedPhotographer.rating}</b> ({selectedPhotographer.reviews} reviews)</span>
-                <span>♣ {selectedPhotographer.experience || "5+ years"} experience</span>
+                <span>
+                  ★ <b>{selectedPhotographer.rating}</b> (
+                  {selectedPhotographer.reviews} reviews)
+                </span>
+                <span>
+                  ♣ {selectedPhotographer.experience || "5+ years"} experience
+                </span>
               </div>
               <div className={styles.profileTags}>
-                {selectedPhotographer.tags.map((tag) => <span key={tag}>{tag}</span>)}
+                {selectedPhotographer.tags.map((tag) => (
+                  <span key={tag}>{tag}</span>
+                ))}
               </div>
               <div className={styles.aboutProfile}>
                 <h3>About Me</h3>
-                <p>{selectedPhotographer.bio || "I love capturing real emotions and creating timeless memories for every client."}</p>
+                <p>
+                  {selectedPhotographer.bio ||
+                    "I love capturing real emotions and creating timeless memories for every client."}
+                </p>
                 <small>ID: {selectedPhotographer.id || "PH00124"}</small>
               </div>
               <div className={styles.calendar}>
@@ -393,25 +421,64 @@ export default function Home() {
                 <div className={styles.calendarHeader}>
                   <button
                     aria-label="Previous month"
-                    onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() - 1, 1))}
-                  >‹</button>
-                  <b>{calendarMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</b>
+                    onClick={() =>
+                      setCalendarMonth(
+                        new Date(
+                          calendarMonth.getFullYear(),
+                          calendarMonth.getMonth() - 1,
+                          1,
+                        ),
+                      )
+                    }
+                  >
+                    ‹
+                  </button>
+                  <b>
+                    {calendarMonth.toLocaleDateString("en-US", {
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </b>
                   <button
                     aria-label="Next month"
-                    onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
-                  >›</button>
+                    onClick={() =>
+                      setCalendarMonth(
+                        new Date(
+                          calendarMonth.getFullYear(),
+                          calendarMonth.getMonth() + 1,
+                          1,
+                        ),
+                      )
+                    }
+                  >
+                    ›
+                  </button>
                 </div>
                 <div className={styles.calendarGrid}>
-                  {calendarDays.map((day) => <b key={day}>{day}</b>)}
+                  {calendarDays.map((day) => (
+                    <b key={day}>{day}</b>
+                  ))}
                   {getCalendarCells(calendarMonth).map((cell, index) => {
-                    const isBooked = cell.currentMonth && [7, 16].includes(cell.day);
-                    const isSelected = cell.currentMonth && cell.day === selectedDate;
+                    const isBooked =
+                      cell.currentMonth && [7, 16].includes(cell.day);
+                    const isSelected =
+                      cell.currentMonth && cell.day === selectedDate;
                     return (
                       <button
                         type="button"
                         key={`${cell.day}-${index}`}
-                        className={!cell.currentMonth ? styles.mutedDay : isBooked ? styles.booked : isSelected ? styles.selectedDay : styles.available}
-                        onClick={() => cell.currentMonth && setSelectedDate(cell.day)}
+                        className={
+                          !cell.currentMonth
+                            ? styles.mutedDay
+                            : isBooked
+                              ? styles.booked
+                              : isSelected
+                                ? styles.selectedDay
+                                : styles.available
+                        }
+                        onClick={() =>
+                          cell.currentMonth && setSelectedDate(cell.day)
+                        }
                         disabled={!cell.currentMonth}
                       >
                         {cell.day}
@@ -419,9 +486,24 @@ export default function Home() {
                     );
                   })}
                 </div>
-                <div className={styles.calendarLegend}><span><i className={styles.availableDot} /> Available</span><span><i className={styles.bookedDot} /> Booked</span><span><i className={styles.selectedDot} /> Selected</span></div>
+                <div className={styles.calendarLegend}>
+                  <span>
+                    <i className={styles.availableDot} /> Available
+                  </span>
+                  <span>
+                    <i className={styles.bookedDot} /> Booked
+                  </span>
+                  <span>
+                    <i className={styles.selectedDot} /> Selected
+                  </span>
+                </div>
               </div>
-              <button className={styles.modalCloseButton} onClick={() => setSelectedPhotographer(null)}>Close</button>
+              <button
+                className={styles.modalCloseButton}
+                onClick={() => setSelectedPhotographer(null)}
+              >
+                Close
+              </button>
             </div>
           </section>
         </div>

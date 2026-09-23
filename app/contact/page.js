@@ -7,6 +7,8 @@ import styles from "./page.module.css";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 export default function ContactPage() {
   const [sent, setSent] = useState(false);
 
@@ -84,16 +86,16 @@ export default function ContactPage() {
               <b>Follow Us</b>
               <div>
                 <a href="https://facebook.com" aria-label="Facebook">
-                  <Image src="/facebook.svg" alt="" width={18} height={18} />
+                  <Image src={`${basePath}/facebook.svg`} alt="" width={18} height={18} />
                 </a>
                 <a href="https://instagram.com" aria-label="Instagram">
-                  <Image src="/instagram.svg" alt="" width={18} height={18} />
+                  <Image src={`${basePath}/instagram.svg`} alt="" width={18} height={18} />
                 </a>
                 <a href="https://linkedin.com" aria-label="LinkedIn">
-                  <Image src="/linkedin.svg" alt="" width={18} height={18} />
+                  <Image src={`${basePath}/linkedin.svg`} alt="" width={18} height={18} />
                 </a>
                 <a href="https://youtube.com" aria-label="YouTube">
-                  <Image src="/youtube.svg" alt="" width={18} height={18} />
+                  <Image src={`${basePath}/youtube.svg`} alt="" width={18} height={18} />
                 </a>
               </div>
             </section>

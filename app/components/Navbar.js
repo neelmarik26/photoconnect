@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useState } from "react";
 import styles from "./Navbar.module.css";
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 const links = [
   ["home", "Home", "/"],
   ["about", "About", "/#photographers"],
@@ -18,7 +20,7 @@ export default function Navbar({ current = "home" }) {
     <header className={styles.header}>
       <Link href="/" className={styles.logo}>
         <Image
-          src="/photoconnect-logo.svg"
+          src={`${basePath}/photoconnect-logo.svg`}
           alt="PhotoConnect logo"
           width="31"
           height="24"

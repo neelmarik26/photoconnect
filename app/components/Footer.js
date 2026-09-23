@@ -2,13 +2,15 @@ import Image from "next/image";
 import Link from "next/link";
 import styles from "../page.module.css";
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 export default function Footer() {
   return (
     <footer id="footer" className={styles.footer}>
       <div>
         <Link href="/" className={styles.logo}>
           <Image
-            src="/photoconnect-logo.svg"
+            src={`${basePath}/photoconnect-logo.svg`}
             alt="PhotoConnect logo"
             width="31"
             height="24"
@@ -21,16 +23,16 @@ export default function Footer() {
         <p>Connecting great photographers with amazing opportunities.</p>
         <div className={styles.social}>
           <a href="https://facebook.com" aria-label="Facebook">
-            <Image src="/facebook.svg" alt="" width={17} height={17} />
+            <Image src={`${basePath}/facebook.svg`} alt="" width={17} height={17} />
           </a>
           <a href="https://instagram.com" aria-label="Instagram">
-            <Image src="/instagram.svg" alt="" width={17} height={17} />
+            <Image src={`${basePath}/instagram.svg`} alt="" width={17} height={17} />
           </a>
           <a href="https://youtube.com" aria-label="YouTube">
-            <Image src="/youtube.svg" alt="" width={17} height={17} />
+            <Image src={`${basePath}/youtube.svg`} alt="" width={17} height={17} />
           </a>
           <a href="https://linkedin.com" aria-label="LinkedIn">
-            <Image src="/linkedin.svg" alt="" width={17} height={17} />
+            <Image src={`${basePath}/linkedin.svg`} alt="" width={17} height={17} />
           </a>
         </div>
       </div>

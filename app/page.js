@@ -9,7 +9,7 @@ import Footer from "./components/Footer";
 
 const photographers = [
   {
-    name: "Arjun Mehta",
+    name: "Arjun Marik",
     location: "Mumbai, Maharashtra",
     rating: "4.8",
     reviews: 24,

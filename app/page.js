@@ -191,12 +191,14 @@ export default function Home() {
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     const previousPaddingRight = document.body.style.paddingRight;
+    const previousDocumentOverflow = document.documentElement.style.overflow;
 
     if (selectedPhotographer) {
       const scrollbarWidth =
         window.innerWidth - document.documentElement.clientWidth;
       document.body.style.overflow = "hidden";
       document.body.style.paddingRight = `${scrollbarWidth}px`;
+      document.documentElement.style.overflow = "hidden";
     }
 
     function closeOnEscape(event) {
@@ -207,6 +209,7 @@ export default function Home() {
     return () => {
       document.body.style.overflow = previousOverflow;
       document.body.style.paddingRight = previousPaddingRight;
+      document.documentElement.style.overflow = previousDocumentOverflow;
       document.removeEventListener("keydown", closeOnEscape);
     };
   }, [selectedPhotographer]);

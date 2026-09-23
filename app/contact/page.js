@@ -4,24 +4,8 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import styles from "./page.module.css";
-import navStyles from "../auth.module.css";
-
-function Logo() {
-  return (
-    <Link href="/" className={navStyles.logo}>
-      <Image
-        src="/photoconnect-logo.svg"
-        alt="PhotoConnect logo"
-        width="31"
-        height="24"
-      />
-      <span>
-        <b>PhotoConnect</b>
-        <small>Capture People. Create Moments.</small>
-      </span>
-    </Link>
-  );
-}
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 export default function ContactPage() {
   const [sent, setSent] = useState(false);
@@ -33,24 +17,7 @@ export default function ContactPage() {
 
   return (
     <main className={styles.page}>
-      <header className={navStyles.header}>
-        <Logo />
-        <nav className={navStyles.nav}>
-          <Link href="/">Home</Link>
-          <Link href="/#photographers">About</Link>
-          <Link className={navStyles.current} href="/contact">
-            Contact Us
-          </Link>
-        </nav>
-        <div className={navStyles.actions}>
-          <Link className={navStyles.action} href="/signin">
-            Sign In
-          </Link>
-          <Link className={navStyles.actionPrimary} href="/signup">
-            Sign Up
-          </Link>
-        </div>
-      </header>
+      <Navbar current="contact" />
 
       <section className={styles.contactWrap}>
         <div className={styles.intro}>
@@ -84,27 +51,35 @@ export default function ContactPage() {
             </button>
           </form>
           <aside>
-            <section>
+            <a
+              className={styles.contactDetail}
+              href="https://www.google.com/maps/search/?api=1&query=Bengaluru%2C%20Karnataka%2C%20India"
+              target="_blank"
+              rel="noreferrer"
+            >
               <i>⌖</i>
               <div>
                 <b>Our Office</b>
                 <p>Bengaluru, Karnataka, India</p>
               </div>
-            </section>
-            <section>
+            </a>
+            <a
+              className={styles.contactDetail}
+              href="mailto:support@photoconnect.com"
+            >
               <i>✉</i>
               <div>
                 <b>Email</b>
                 <p>support@photoconnect.com</p>
               </div>
-            </section>
-            <section>
+            </a>
+            <a className={styles.contactDetail} href="tel:+919876543210">
               <i>☎</i>
               <div>
                 <b>Phone</b>
                 <p>+91 98765 43210</p>
               </div>
-            </section>
+            </a>
             <section className={styles.follow}>
               <b>Follow Us</b>
               <div>
@@ -125,6 +100,7 @@ export default function ContactPage() {
           </aside>
         </div>
       </section>
+      <Footer />
     </main>
   );
 }

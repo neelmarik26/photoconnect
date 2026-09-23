@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import styles from "./page.module.css";
+import Navbar from "./components/Navbar";
+import PhotographerCard from "./components/PhotographerCard";
+import Footer from "./components/Footer";
 
 const photographers = [
   {
@@ -71,9 +73,9 @@ const partners = [
   ["ℂ", "Celebrations Co.", "Events & Beyond"],
   ["✾", "Elite Weddings", "Your Dream, Our Plan"],
   ["$", "Corporate Connect", "Events | Branding | Experiences"],
+  ["#", "Corpo Connect", "Eventyrujts | Brandidyjng | Experidgjences"],
 ];
 
-const year = new Date().getFullYear();
 const calendarDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 function getCalendarCells(monthDate) {
@@ -98,36 +100,104 @@ function getCalendarCells(monthDate) {
   return cells;
 }
 
-function Logo() {
-  return (
-    <a href="#home" className={styles.logo}>
-      <Image
-        src="/photoconnect-logo.svg"
-        alt="PhotoConnect logo"
-        width="31"
-        height="24"
-      />
-      <span>
-        <b>PhotoConnect</b>
-        <small>Capture People. Create Moments.</small>
-      </span>
-    </a>
-  );
-}
-
 export default function Home() {
   const [slide, setSlide] = useState(0);
   const [selectedPhotographer, setSelectedPhotographer] = useState(null);
   const [calendarMonth, setCalendarMonth] = useState(new Date(2025, 4, 1));
   const [selectedDate, setSelectedDate] = useState(12);
+  const [profileDragging, setProfileDragging] = useState(false);
+  const swipeStartX = useRef(null);
+  const profileSwipeStartY = useRef(null);
   const heroImages = [
     "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1800&q=85",
     "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=1800&q=85",
     "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1800&q=85",
   ];
 
+  function handleHeroPointerDown(event) {
+    swipeStartX.current = event.clientX;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handleHeroPointerUp(event) {
+    if (swipeStartX.current === null) return;
+
+    const distance = event.clientX - swipeStartX.current;
+    swipeStartX.current = null;
+
+    if (Math.abs(distance) < 50) return;
+
+    setSlide((currentSlide) =>
+      distance < 0
+        ? (currentSlide + 1) % heroImages.length
+        : (currentSlide + heroImages.length - 1) % heroImages.length,
+    );
+  }
+
+  function handleHeroPointerCancel() {
+    swipeStartX.current = null;
+  }
+
+  function handleProfilePointerDown(event) {
+    if (!event.target.closest("[data-profile-drag-handle]")) return;
+    event.currentTarget.style.animation = "none";
+    event.currentTarget.style.transform = "";
+    profileSwipeStartY.current = event.clientY;
+    setProfileDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function handleProfilePointerMove(event) {
+    if (profileSwipeStartY.current === null) return;
+
+    const distance = Math.max(0, event.clientY - profileSwipeStartY.current);
+    event.currentTarget.style.transform = `translateY(${distance}px)`;
+  }
+
+  function handleProfilePointerUp(event) {
+    if (profileSwipeStartY.current === null) return;
+
+    const distance = event.clientY - profileSwipeStartY.current;
+    profileSwipeStartY.current = null;
+    setProfileDragging(false);
+    event.currentTarget.releasePointerCapture(event.pointerId);
+
+    if (distance > 100) {
+      event.currentTarget.style.transform = "translateY(100%)";
+      window.setTimeout(() => setSelectedPhotographer(null), 220);
+      return;
+    }
+
+    event.currentTarget.style.transform = "";
+  }
+
+  function handleProfilePointerCancel(event) {
+    profileSwipeStartY.current = null;
+    setProfileDragging(false);
+    event.currentTarget.style.animation = "none";
+    event.currentTarget.style.transform = "";
+  }
+
+  function closeProfile() {
+    setSelectedPhotographer(null);
+  }
+
+  function handleProfileBackdropClick(event) {
+    if (event.target === event.currentTarget) {
+      setSelectedPhotographer(null);
+    }
+  }
+
   useEffect(() => {
-    document.body.style.overflow = selectedPhotographer ? "hidden" : "";
+    const previousOverflow = document.body.style.overflow;
+    const previousPaddingRight = document.body.style.paddingRight;
+
+    if (selectedPhotographer) {
+      const scrollbarWidth =
+        window.innerWidth - document.documentElement.clientWidth;
+      document.body.style.overflow = "hidden";
+      document.body.style.paddingRight = `${scrollbarWidth}px`;
+    }
 
     function closeOnEscape(event) {
       if (event.key === "Escape") setSelectedPhotographer(null);
@@ -135,33 +205,28 @@ export default function Home() {
 
     document.addEventListener("keydown", closeOnEscape);
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPaddingRight;
       document.removeEventListener("keydown", closeOnEscape);
     };
   }, [selectedPhotographer]);
 
   return (
     <main id="home" className={styles.page}>
-      <header className={styles.header}>
-        <Logo />
-        <nav>
-          <a className={styles.current} href="#home">
-            Home
-          </a>
-          <a href="#photographers">About</a>
-          <a href="/contact">Contact Us</a>
-        </nav>
-        <div className={styles.actions}>
-          <Link href="/signin">Sign In</Link>
-          <Link href="/signup">Sign Up</Link>
-        </div>
-      </header>
+      <Navbar />
       <section
         className={styles.hero}
-        style={{
-          backgroundImage: `linear-gradient(90deg, rgba(4, 20, 28, .68), rgba(4, 20, 28, .06)), url(${heroImages[slide]})`,
-        }}
+        onPointerDown={handleHeroPointerDown}
+        onPointerUp={handleHeroPointerUp}
+        onPointerCancel={handleHeroPointerCancel}
       >
+        <div
+          key={slide}
+          className={styles.heroImage}
+          style={{
+            backgroundImage: `linear-gradient(90deg, rgba(4, 20, 28, .68), rgba(4, 20, 28, .06)), url(${heroImages[slide]})`,
+          }}
+        />
         <button
           className={`${styles.arrow} ${styles.left}`}
           onClick={() =>
@@ -210,50 +275,17 @@ export default function Home() {
             </p>
           </div>
           <span>
-            Scroll to discover more&nbsp; <b>⌄</b>
+            <span className={styles.scrollHintText}>Scroll to discover more</span>
+            <b>⌄</b>
           </span>
         </div>
         <div className={styles.grid}>
           {photographers.map((person) => (
-            <article
-              className={styles.card}
+            <PhotographerCard
               key={person.name}
-              onClick={() => setSelectedPhotographer(person)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  setSelectedPhotographer(person);
-                }
-              }}
-              role="button"
-              tabIndex={0}
-            >
-              <div className={styles.photo}>
-                <img src={person.image} alt={person.name} />
-                <button
-                  type="button"
-                  aria-label={`Save ${person.name}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    event.currentTarget.classList.toggle(styles.saved);
-                  }}
-                >
-                  ♡
-                </button>
-              </div>
-              <div className={styles.cardInfo}>
-                <h3>{person.name}</h3>
-                <p className={styles.location}>● &nbsp;{person.location}</p>
-                <div className={styles.tags}>
-                  {person.tags.map((tag) => (
-                    <span key={tag}>{tag}</span>
-                  ))}
-                </div>
-                <p className={styles.rating}>
-                  ★ <b>{person.rating}</b>{" "}
-                  <small>({person.reviews} reviews)</small>
-                </p>
-              </div>
-            </article>
+              person={person}
+              onSelect={setSelectedPhotographer}
+            />
           ))}
         </div>
         <div className={styles.loading}>
@@ -264,80 +296,66 @@ export default function Home() {
       <section className={styles.partners}>
         <h2>Our Partner Companies</h2>
         <p>Proud to work with amazing organizations</p>
-        <div className={styles.partnerGrid}>
-          {partners.map(([icon, name, description]) => (
-            <article key={name}>
-              <strong>{icon}</strong>
-              <h3>{name}</h3>
-              <small>{description}</small>
-              <div>
-                <span>in</span>
-                <span>◎</span>
-                <span>♥</span>
+        <div
+          className={`${styles.partnerGrid} ${
+            partners.length > 4 ? styles.hasMarquee : ""
+          }`}
+        >
+          <div className={styles.partnerTrack}>
+            {[false, true].map((isDuplicate) => (
+              <div
+                className={styles.partnerSet}
+                aria-hidden={isDuplicate}
+                key={isDuplicate ? "duplicate" : "original"}
+              >
+                {partners.map(([icon, name, description]) => (
+                  <article key={`${name}-${isDuplicate ? "duplicate" : "original"}`}>
+                    <strong>{icon}</strong>
+                    <h3>{name}</h3>
+                    <small>{description}</small>
+                    <div>
+                      <span>in</span>
+                      <span>◎</span>
+                      <span>♥</span>
+                    </div>
+                  </article>
+                ))}
               </div>
-            </article>
-          ))}
-        </div>
-      </section>
-      <footer id="footer" className={styles.footer}>
-        <div>
-          <Logo />
-          <p>Connecting great photographers with amazing opportunities.</p>
-          <div className={styles.social}>
-            <a href="https://facebook.com" aria-label="Facebook">
-              <Image src="/facebook.svg" alt="" width={17} height={17} />
-            </a>
-            <a href="https://instagram.com" aria-label="Instagram">
-              <Image src="/instagram.svg" alt="" width={17} height={17} />
-            </a>
-            <a href="https://youtube.com" aria-label="YouTube">
-              <Image src="/youtube.svg" alt="" width={17} height={17} />
-            </a>
-            <a href="https://linkedin.com" aria-label="LinkedIn">
-              <Image src="/linkedin.svg" alt="" width={17} height={17} />
-            </a>
+            ))}
           </div>
         </div>
-        <div>
-          <h4>Quick Links</h4>
-          <a href="#home">Home</a>
-          <a href="#photographers">About Us</a>
-          <a href="/contact">Contact Us</a>
-          <a href="#footer">Privacy Policy</a>
-          <a href="#footer">Terms & Conditions</a>
-        </div>
-        <div>
-          <h4>For Photographers</h4>
-          <a href="#home">Sign Up</a>
-          <a href="#home">Sign In</a>
-          <a href="#photographers">Update Profile</a>
-        </div>
-        <div>
-          <h4>Contact</h4>
-          <p>✉ &nbsp; support@photoconnect.com</p>
-          <p>☎ &nbsp; +91 98765 43210</p>
-          <p>● &nbsp; Bengaluru, India</p>
-        </div>
-        <small className={styles.copyright}>
-          © {year} PhotoConnect. All rights reserved.
-        </small>
-      </footer>
+      </section>
+      <Footer />
       {selectedPhotographer && (
         <div
           className={styles.modalBackdrop}
-          onClick={() => setSelectedPhotographer(null)}
+          onClick={handleProfileBackdropClick}
           role="presentation"
         >
           <section
-            className={styles.profileModal}
+            className={`${styles.profileModal} ${
+              profileDragging ? styles.profileDragging : ""
+            }`}
             role="dialog"
             aria-modal="true"
             aria-labelledby="profile-title"
             onClick={(event) => event.stopPropagation()}
+            onPointerDown={handleProfilePointerDown}
+            onPointerMove={handleProfilePointerMove}
+            onPointerUp={handleProfilePointerUp}
+            onPointerCancel={handleProfilePointerCancel}
           >
             <button
+              className={styles.profileDragHandle}
+              data-profile-drag-handle
+              type="button"
+              aria-label="Drag down to close profile"
+            >
+              <span />
+            </button>
+            <button
               className={styles.modalClose}
-              onClick={() => setSelectedPhotographer(null)}
+              onClick={closeProfile}
               aria-label="Close photographer profile"
             >
               ×

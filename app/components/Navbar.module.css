@@ -1,0 +1,148 @@
+.header {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  height: 72px;
+  gap: 36px;
+  padding: 0 max(5.4%, calc((100% - 1240px) / 2));
+  background: #0a202c;
+  color: #fff;
+}
+.logo {
+  display: flex;
+  min-width: 182px;
+  align-items: center;
+  gap: 9px;
+  color: #fff;
+}
+.logo img {
+  width: 31px;
+  height: 24px;
+}
+.logo b,
+.logo small {
+  display: block;
+}
+.logo b {
+  font-size: 18px;
+}
+.logo small {
+  margin-top: 2px;
+  color: #dbe3e5;
+  font-size: 8px;
+  white-space: nowrap;
+}
+.header nav {
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+  gap: 32px;
+  margin-left: auto;
+}
+.header nav a {
+  padding: 7px 0;
+  color: #fff;
+  font-size: 13px;
+  transition: color 160ms ease, border-color 160ms ease;
+}
+.header nav a:hover {
+  color: #8dc5ff;
+}
+.header nav .current {
+  border-bottom: 2px solid #fff;
+}
+.menuToggle {
+  display: none;
+}
+.actions {
+  display: flex;
+  gap: 9px;
+  margin-left: 12px;
+}
+.actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  border: 1px solid #778894;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+}
+.actions a:last-child {
+  border-color: #1878f2;
+  background: #1878f2;
+}
+.actions a:hover {
+  border-color: #8dc5ff;
+}
+@media (max-width: 600px) {
+  .header {
+    height: 57px;
+    gap: 8px;
+    padding: 0 15px;
+  }
+  .logo {
+    min-width: auto;
+  }
+  .logo b {
+    font-size: 12px;
+  }
+  .logo small {
+    font-size: 5px;
+  }
+  .logo img {
+    width: 25px;
+    height: 20px;
+  }
+  .header nav {
+    display: none;
+    position: absolute;
+    z-index: 10;
+    top: 57px;
+    right: 0;
+    left: 0;
+    margin-left: 0;
+    background: #0a202c;
+    box-shadow: 0 8px 16px #00101840;
+  }
+  .header nav.mobileMenuOpen {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+  }
+  .header nav a {
+    padding: 14px 18px;
+    border-top: 1px solid #ffffff1c;
+    font-size: 13px;
+  }
+  .header nav .current {
+    border-bottom: 0;
+  }
+  .menuToggle {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    margin-left: auto;
+    padding: 0;
+    border: 1px solid #778894;
+    border-radius: 4px;
+    background: transparent;
+    color: #fff;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .actions {
+    gap: 5px;
+    margin-left: 0;
+  }
+  .actions a {
+    padding: 7px 9px;
+    font-size: 9px;
+  }
+}

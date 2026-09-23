@@ -1,1 +1,389 @@
-.page{min-height:100vh;background:linear-gradient(135deg,#f5f8f9,#eaf1f4);color:#102733;font-family:Arial,sans-serif}.header{height:76px;background:#0a202c;display:flex;align-items:center;padding:0 max(5.4%,calc((100% - 1240px)/2));color:#fff;gap:30px}.logo{display:flex;align-items:center;gap:9px;color:#fff;min-width:182px}.camera{width:27px;height:21px;border:2px solid currentColor;border-radius:3px;display:grid;place-items:center;font-size:11px;position:relative}.camera:before{content:"";position:absolute;width:8px;height:4px;border:2px solid currentColor;border-bottom:0;top:-7px;left:7px}.logo b{font-size:18px;display:block}.logo small{font-size:8px;display:block;margin-top:2px;color:#dbe3e5;white-space:nowrap}.header nav{display:flex;align-self:stretch;align-items:center;gap:28px;margin-left:auto}.header nav a{font-size:13px;color:#fff;padding:6px 0}.header nav .current{border-bottom:2px solid #fff}.actions{display:flex;gap:9px;margin-left:12px}.actions button{background:transparent;border:1px solid #778894;border-radius:4px;color:#fff;padding:10px 20px;font-size:12px;cursor:pointer}.actions button:last-child{background:#1878f2;border-color:#1878f2}.contactWrap{max-width:1060px;margin:0 auto;padding:72px 30px 100px}.intro{text-align:center;margin-bottom:35px}.intro>p{font-size:11px;font-weight:bold;letter-spacing:2px;color:#ca8137;margin-bottom:11px}.intro h1{font-size:46px;letter-spacing:-2px;margin-bottom:12px}.intro span{color:#647783;font-size:14px}.contactCard{background:#fff;box-shadow:0 18px 50px #1c3e4b18;border:1px solid #e2e9eb;border-radius:8px;display:grid;grid-template-columns:1.35fr 1fr;overflow:hidden}.contactCard form{padding:44px 50px}.contactCard label{display:block;color:#263c47;font-weight:bold;font-size:12px;margin-bottom:18px}.contactCard input,.contactCard textarea{display:block;width:100%;border:1px solid #d9e2e7;border-radius:4px;margin-top:7px;padding:12px;color:#263c47;font:inherit;font-size:12px;outline-color:#1b76e9;resize:vertical}.contactCard textarea{min-height:112px}.contactCard form button{display:block;width:100%;border:0;border-radius:4px;background:#102a36;color:white;padding:13px;font-weight:bold;font-size:13px;cursor:pointer;transition:background .2s}.contactCard form button:hover{background:#1a76d9}.contactCard aside{background:#f3f7f8;padding:53px 42px}.contactCard aside section{display:flex;gap:13px;margin-bottom:29px}.contactCard aside i{font-style:normal;color:#1b506d;font-size:19px;line-height:1}.contactCard aside b{font-size:13px;color:#1b3440}.contactCard aside p{font-size:12px;color:#617581;margin-top:5px;line-height:1.45}.follow{display:block!important;margin-top:10px}.follow>div{display:flex;gap:10px;margin-top:12px}.follow a{display:grid;place-items:center;width:26px;height:26px;border-radius:4px;background:#1976df;color:#fff;font-size:13px;font-weight:bold}.follow a:nth-child(2){background:#e53f68}.follow a:nth-child(3){background:#1670ac}.follow a:nth-child(4){background:#e62b25}@media(max-width:650px){.header{height:58px;padding:0 15px;gap:10px}.logo{min-width:auto}.logo b{font-size:12px}.logo small{font-size:5px}.camera{transform:scale(.8);margin-right:-3px}.header nav{gap:12px}.header nav a{font-size:9px}.actions{margin-left:0;gap:4px}.actions button{padding:7px 9px;font-size:9px}.contactWrap{padding:45px 16px 65px}.intro h1{font-size:36px}.intro span{font-size:12px;line-height:1.5;display:block}.contactCard{grid-template-columns:1fr}.contactCard form{padding:30px 24px}.contactCard aside{padding:30px 24px;display:grid;grid-template-columns:1fr 1fr;gap:3px 15px}.contactCard aside section{margin-bottom:20px}.contactCard aside p{font-size:10px}.contactCard aside b{font-size:11px}.follow{margin-top:0}.follow>div{gap:7px}.follow a{width:23px;height:23px;font-size:11px}}
+.contactDetail {
+    display: flex;
+    align-items: flex-start;
+    gap: 13px;
+    margin-bottom: 28px;
+    color: #fff;
+    text-decoration: none
+}
+
+.contactDetail:hover {
+    color: #8dc5ff
+}
+
+.contactDetail i {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #41e5e031;
+    display: grid;
+    place-items: center;
+    font-style: normal;
+    font-size: 14px;
+    flex: none
+}
+
+.contactDetail div {
+    min-width: 0
+}
+
+.contactDetail b {
+    font-size: 13px
+}
+
+.contactDetail p {
+    margin-top: 5px;
+    color: #b9cbd1;
+    font-size: 11px
+}
+
+.page {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f8f9, #eaf1f4);
+    color: #102733;
+    font-family: Arial, sans-serif
+}
+
+.header {
+    height: 76px;
+    background: #0a202c;
+    display: flex;
+    align-items: center;
+    padding: 0 max(5.4%, calc((100% - 1240px)/2));
+    color: #fff;
+    gap: 30px
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: #fff;
+    min-width: 182px
+}
+
+.camera {
+    width: 27px;
+    height: 21px;
+    border: 2px solid currentColor;
+    border-radius: 3px;
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    position: relative
+}
+
+.camera:before {
+    content: "";
+    position: absolute;
+    width: 8px;
+    height: 4px;
+    border: 2px solid currentColor;
+    border-bottom: 0;
+    top: -7px;
+    left: 7px
+}
+
+.logo b {
+    font-size: 18px;
+    display: block
+}
+
+.logo small {
+    font-size: 8px;
+    display: block;
+    margin-top: 2px;
+    color: #dbe3e5;
+    white-space: nowrap
+}
+
+.header nav {
+    display: flex;
+    align-self: stretch;
+    align-items: center;
+    gap: 28px;
+    margin-left: auto
+}
+
+.header nav a {
+    font-size: 13px;
+    color: #fff;
+    padding: 6px 0
+}
+
+.header nav .current {
+    border-bottom: 2px solid #fff
+}
+
+.actions {
+    display: flex;
+    gap: 9px;
+    margin-left: 12px
+}
+
+.actions button {
+    background: transparent;
+    border: 1px solid #778894;
+    border-radius: 4px;
+    color: #fff;
+    padding: 10px 20px;
+    font-size: 12px;
+    cursor: pointer
+}
+
+.actions button:last-child {
+    background: #1878f2;
+    border-color: #1878f2
+}
+
+.contactWrap {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding: 72px 30px 100px
+}
+
+.intro {
+    text-align: center;
+    margin-bottom: 35px
+}
+
+.intro>p {
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: #ca8137;
+    margin-bottom: 11px
+}
+
+.intro h1 {
+    font-size: 46px;
+    letter-spacing: -2px;
+    margin-bottom: 12px
+}
+
+.intro span {
+    color: #647783;
+    font-size: 14px
+}
+
+.contactCard {
+    background: #fff;
+    box-shadow: 0 18px 50px #1c3e4b18;
+    border: 1px solid #e2e9eb;
+    border-radius: 8px;
+    display: grid;
+    grid-template-columns: 1.35fr 1fr;
+    overflow: hidden
+}
+
+.contactCard form {
+    padding: 44px 50px
+}
+
+.contactCard label {
+    display: block;
+    color: #263c47;
+    font-weight: bold;
+    font-size: 12px;
+    margin-bottom: 18px
+}
+
+.contactCard input,
+.contactCard textarea {
+    display: block;
+    width: 100%;
+    border: 1px solid #d9e2e7;
+    border-radius: 4px;
+    margin-top: 7px;
+    padding: 12px;
+    color: #263c47;
+    font: inherit;
+    font-size: 12px;
+    outline-color: #1b76e9;
+    resize: vertical
+}
+
+.contactCard textarea {
+    min-height: 112px
+}
+
+.contactCard form button {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-radius: 4px;
+    background: #102a36;
+    color: white;
+    padding: 13px;
+    font-weight: bold;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background .2s
+}
+
+.contactCard form button:hover {
+    background: #1a76d9
+}
+
+.contactCard aside {
+    background: #f3f7f8;
+    padding: 53px 42px
+}
+
+.contactCard aside section {
+    display: flex;
+    gap: 13px;
+    margin-bottom: 29px
+}
+
+.contactCard aside i {
+    font-style: normal;
+    color: #1b506d;
+    font-size: 19px;
+    line-height: 1
+}
+
+.contactCard aside b {
+    font-size: 13px;
+    color: #1b3440
+}
+
+.contactCard aside p {
+    font-size: 12px;
+    color: #617581;
+    margin-top: 5px;
+    line-height: 1.45
+}
+
+.follow {
+    display: block !important;
+    margin-top: 10px
+}
+
+.follow>div {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px
+}
+
+.follow a {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
+    background: #1976df;
+    color: #fff;
+    font-size: 13px;
+    font-weight: bold
+}
+
+.follow a:nth-child(2) {
+    background: #e53f68
+}
+
+.follow a:nth-child(3) {
+    background: #1670ac
+}
+
+.follow a:nth-child(4) {
+    background: #e62b25
+}
+
+@media(max-width:650px) {
+    .header {
+        height: 58px;
+        padding: 0 15px;
+        gap: 10px
+    }
+
+    .logo {
+        min-width: auto
+    }
+
+    .logo b {
+        font-size: 12px
+    }
+
+    .logo small {
+        font-size: 5px
+    }
+
+    .camera {
+        transform: scale(.8);
+        margin-right: -3px
+    }
+
+    .header nav {
+        gap: 12px
+    }
+
+    .header nav a {
+        font-size: 9px
+    }
+
+    .actions {
+        margin-left: 0;
+        gap: 4px
+    }
+
+    .actions button {
+        padding: 7px 9px;
+        font-size: 9px
+    }
+
+    .contactWrap {
+        padding: 45px 16px 65px
+    }
+
+    .intro h1 {
+        font-size: 36px
+    }
+
+    .intro span {
+        font-size: 12px;
+        line-height: 1.5;
+        display: block
+    }
+
+    .contactCard {
+        grid-template-columns: 1fr
+    }
+
+    .contactCard form {
+        padding: 30px 24px
+    }
+
+    .contactCard aside {
+        padding: 30px 24px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 3px 15px
+    }
+
+    .contactCard aside section {
+        margin-bottom: 20px
+    }
+
+    .contactCard aside p {
+        font-size: 10px
+    }
+
+    .contactCard aside b {
+        font-size: 11px
+    }
+
+    .follow {
+        margin-top: 0
+    }
+
+    .follow>div {
+        gap: 7px
+    }
+
+    .follow a {
+        width: 23px;
+        height: 23px;
+        font-size: 11px
+    }
+}

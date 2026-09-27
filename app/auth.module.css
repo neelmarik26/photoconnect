@@ -132,6 +132,89 @@
   font-size: 11px;
   outline-color: #1878f2;
 }
+.formError {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 12px;
+  border: 1px solid #f0c7c2;
+  border-left: 3px solid #c4473b;
+  border-radius: 4px;
+  background: #fff5f3;
+  color: #87332c;
+  font-size: 11px;
+  font-weight: normal;
+  line-height: 1.45;
+  animation: alertEnter 180ms ease-out;
+}
+.formError svg {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+@keyframes alertEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.passwordInput {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.passwordInput input {
+  padding-right: 42px;
+}
+.visibilityToggle {
+  position: absolute;
+  right: 5px;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #71818d;
+  cursor: pointer;
+}
+.visibilityToggle:hover {
+  color: #1878f2;
+}
+.visibilityToggle:focus-visible {
+  outline: 2px solid #1878f2;
+  outline-offset: 1px;
+}
+.eyeIcon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+.eyeSlash {
+  stroke-dasharray: 26;
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset 220ms ease;
+}
+.eyeSlashHidden {
+  stroke-dasharray: 26;
+  stroke-dashoffset: 26;
+  transition: stroke-dashoffset 220ms ease;
+}
 .submit {
   margin-top: 4px;
   padding: 12px;
@@ -160,6 +243,134 @@
   justify-self: end;
   margin-top: -5px;
   font-size: 10px;
+}
+.otpCard {
+  width: min(460px, 100%);
+  padding-top: 34px;
+}
+.otpMark {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  margin: 0 auto 18px;
+  border: 1px solid #d6e8e4;
+  border-radius: 50%;
+  background: #eff7f4;
+  color: #16806c;
+}
+.otpMark svg {
+  width: 25px;
+  height: 25px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+.eyebrow {
+  margin-bottom: 8px;
+  color: #16806c !important;
+  font-size: 9px !important;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+.otpEmail {
+  color: #263b4a;
+  font-weight: bold;
+  overflow-wrap: anywhere;
+}
+.otpGroup {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+.otpDigit {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-width: 0;
+  padding: 0;
+  border: 1px solid #d4e0e6;
+  border-radius: 5px;
+  background: #fbfdfd;
+  color: #142c3b;
+  font: inherit;
+  font-size: 22px;
+  font-weight: bold;
+  text-align: center;
+  outline-color: #16806c;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+.otpDigit:focus {
+  transform: translateY(-2px);
+  border-color: #16806c;
+  background: #f2faf7;
+}
+.otpHint {
+  min-height: 30px;
+  color: #758591;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+}
+.otpResend {
+  margin-top: 20px;
+  color: #71818d;
+  font-size: 11px;
+  text-align: center;
+}
+.otpResend button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #16806c;
+  font: inherit;
+  font-weight: bold;
+  cursor: pointer;
+}
+.otpResend button:hover,
+.otpResend button:focus-visible {
+  color: #0c5d4e;
+  text-decoration: underline;
+}
+.otpResend button:disabled {
+  color: #9ba8ae;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+.profileCard {
+  width: min(600px, 100%);
+}
+.profileForm {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.profileForm select,
+.profileForm input {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid #d4e0e6;
+  border-radius: 4px;
+  background: #fff;
+  color: #263b4a;
+  font: inherit;
+  font-size: 12px;
+  outline-color: #1878f2;
+}
+.profileForm input[type="file"] {
+  padding: 8px;
+}
+.profileFieldWide {
+  grid-column: 1 / -1;
+}
+.profileNotice {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #87332c;
+  font-size: 11px;
+  line-height: 1.5;
 }
 @media (max-width: 650px) {
   .header {
@@ -194,5 +405,21 @@
   }
   .card {
     padding: 26px 20px 22px;
+  }
+  .otpCard {
+    padding: 30px 20px 24px;
+  }
+  .otpGroup {
+    gap: 7px;
+  }
+  .otpDigit {
+    font-size: 20px;
+  }
+  .profileForm {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .profileFieldWide,
+  .profileNotice {
+    grid-column: auto;
   }
 }

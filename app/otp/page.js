@@ -121,7 +121,6 @@ export default function OtpPage() {
       }
 
       window.sessionStorage.removeItem("signupPayload");
-      window.sessionStorage.removeItem("signupEmail");
       window.sessionStorage.removeItem("otpResendAttempts");
       window.sessionStorage.removeItem("otpResendAvailableAt");
       

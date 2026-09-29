@@ -13,7 +13,7 @@ const links = [
   ["contact", "Contact Us", "/contact"],
 ];
 
-export default function Navbar({ current = "home" }) {
+export default function Navbar({ current = "home", hideAuthActions = false }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -55,10 +55,12 @@ export default function Navbar({ current = "home" }) {
           </Link>
         ))}
       </nav>
-      <div className={styles.actions}>
-        <Link href="/signin">Sign In</Link>
-        <Link href="/signup">Sign Up</Link>
-      </div>
+      {!hideAuthActions && (
+        <div className={styles.actions}>
+          <Link href="/signin">Sign In</Link>
+          <Link href="/signup">Sign Up</Link>
+        </div>
+      )}
     </header>
   );
 }

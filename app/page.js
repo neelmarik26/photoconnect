@@ -7,67 +7,6 @@ import Navbar from "./components/Navbar";
 import PhotographerCard from "./components/PhotographerCard";
 import Footer from "./components/Footer";
 
-const photographers = [
-  {
-    name: "Arjun Marik",
-    location: "Mumbai, Maharashtra",
-    rating: "4.8",
-    reviews: 24,
-    tags: ["Wedding", "Event", "Portrait"],
-    experience: "5+ years",
-    languages: "English, Hindi, Marathi",
-    id: "PH00123",
-    bio: "I am a passionate photographer specializing in weddings and events. I love capturing real emotions and creating timeless memories.",
-    image:
-      "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=700&q=85",
-  },
-  {
-    name: "Priya Sharma",
-    location: "Bengaluru, Karnataka",
-    rating: "4.9",
-    reviews: 18,
-    tags: ["Event", "Corporate", "Candid"],
-    image:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=700&q=85",
-  },
-  {
-    name: "Rohit Verma",
-    location: "Delhi, NCR",
-    rating: "4.7",
-    reviews: 31,
-    tags: ["Wedding", "Pre-Wedding", "Travel"],
-    image:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=700&q=85",
-  },
-  {
-    name: "Sneha Iyer",
-    location: "Chennai, Tamil Nadu",
-    rating: "4.6",
-    reviews: 12,
-    tags: ["Event", "Portrait", "Product"],
-    image:
-      "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&w=700&q=85",
-  },
-  {
-    name: "Karan Malhotra",
-    location: "Pune, Maharashtra",
-    rating: "4.8",
-    reviews: 27,
-    tags: ["Wedding", "Event", "Fashion"],
-    image:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=700&q=85",
-  },
-  {
-    name: "Neha Kapoor",
-    location: "Hyderabad, Telangana",
-    rating: "4.7",
-    reviews: 19,
-    tags: ["Event", "Candid", "Corporate"],
-    image:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=700&q=85",
-  },
-];
-
 const partners = [
   ["✿", "Dream Events", "Turning Moments into Memories"],
   ["ℂ", "Celebrations Co.", "Events & Beyond"],
@@ -77,6 +16,27 @@ const partners = [
 ];
 
 const calendarDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const savedUserKey = "photoConnectUser";
+const defaultProfileImage = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/defolt_profile_pic.jpg`;
+
+function getImageUrl(path) {
+  if (!path) return defaultProfileImage;
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${process.env.NEXT_PUBLIC_BACKEND_URL}${path}`;
+}
+
+function mapPhotographer(user) {
+  return {
+    ...user,
+    id: user._id,
+    location: [user.city, user.state, user.country].filter(Boolean).join(", ") || "Location not provided",
+    rating: Number(user.rating) || 0,
+    reviews: Number(user.totalReviews) || 0,
+    tags: Array.isArray(user.specialties) ? user.specialties : [],
+    experience: user.experienceYears ? `${user.experienceYears} years` : "",
+    image: getImageUrl(user.profileImageUrl),
+  };
+}
 
 function getCalendarCells(monthDate) {
   const year = monthDate.getFullYear();
@@ -102,10 +62,19 @@ function getCalendarCells(monthDate) {
 
 export default function Home() {
   const [slide, setSlide] = useState(0);
+  const [photographers, setPhotographers] = useState([]);
+  const [photographersLoading, setPhotographersLoading] = useState(true);
+  const [photographersError, setPhotographersError] = useState("");
   const [selectedPhotographer, setSelectedPhotographer] = useState(null);
-  const [calendarMonth, setCalendarMonth] = useState(new Date(2025, 4, 1));
-  const [selectedDate, setSelectedDate] = useState(12);
+  const [galleryPhotos, setGalleryPhotos] = useState([]);
+  const [galleryLoading, setGalleryLoading] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const currentDate = new Date();
+    return new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  });
+  const [selectedDate, setSelectedDate] = useState("");
   const [profileDragging, setProfileDragging] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const swipeStartX = useRef(null);
   const profileSwipeStartY = useRef(null);
   const heroImages = [
@@ -113,6 +82,74 @@ export default function Home() {
     "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=1800&q=85",
     "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1800&q=85",
   ];
+
+  useEffect(() => {
+    let isCurrent = true;
+    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/photographers?page=1&limit=100`)
+      .then(async (response) => {
+        const result = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(result?.message || "Could not load photographers.");
+        }
+        return result;
+      })
+      .then((result) => {
+        if (isCurrent) {
+          const users = Array.isArray(result?.data) ? result.data : [];
+          setPhotographers(
+            users.filter((user) => user.status === "active").map(mapPhotographer),
+          );
+        }
+      })
+      .catch((error) => {
+        if (isCurrent) {
+          setPhotographersError(error.message || "Could not load photographers.");
+        }
+      })
+      .finally(() => {
+        if (isCurrent) setPhotographersLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedPhotographer?._id) return;
+
+    let isCurrent = true;
+    fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/photo-galleries/user/${encodeURIComponent(selectedPhotographer._id)}?limit=50&sortBy=sequence&sortOrder=asc`,
+    )
+      .then(async (response) => {
+        const result = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(result?.message || "Could not load this photographer's gallery.");
+        }
+        return result;
+      })
+      .then((result) => {
+        if (!isCurrent) return;
+        const photos = Array.isArray(result?.data) ? result.data : [];
+        setGalleryPhotos(
+          photos
+            .filter((photo) => !photo.isProfileImage && photo.link)
+            .sort((first, second) => first.sequence - second.sequence)
+            .slice(0, 3),
+        );
+      })
+      .catch(() => {
+        if (isCurrent) setGalleryPhotos([]);
+      })
+      .finally(() => {
+        if (isCurrent) setGalleryLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [selectedPhotographer]);
 
   function handleHeroPointerDown(event) {
     swipeStartX.current = event.clientX;
@@ -180,11 +217,19 @@ export default function Home() {
 
   function closeProfile() {
     setSelectedPhotographer(null);
+    setGalleryPhotos([]);
+    setGalleryLoading(false);
+  }
+
+  function openPhotographer(person) {
+    setSelectedPhotographer(person);
+    setGalleryPhotos([]);
+    setGalleryLoading(true);
   }
 
   function handleProfileBackdropClick(event) {
     if (event.target === event.currentTarget) {
-      setSelectedPhotographer(null);
+      closeProfile();
     }
   }
 
@@ -202,7 +247,7 @@ export default function Home() {
     }
 
     function closeOnEscape(event) {
-      if (event.key === "Escape") setSelectedPhotographer(null);
+      if (event.key === "Escape") closeProfile();
     }
 
     document.addEventListener("keydown", closeOnEscape);
@@ -213,6 +258,12 @@ export default function Home() {
       document.removeEventListener("keydown", closeOnEscape);
     };
   }, [selectedPhotographer]);
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    console.log("Search input:", value);
+  };
 
   return (
     <main id="home" className={styles.page}>
@@ -282,19 +333,47 @@ export default function Home() {
             <b>⌄</b>
           </span>
         </div>
-        <div className={styles.grid}>
-          {photographers.map((person) => (
-            <PhotographerCard
-              key={person.name}
-              person={person}
-              onSelect={setSelectedPhotographer}
+
+        {/* Search Section */}
+        <div className={styles.filterSection}>
+          <div className={styles.searchBox}>
+            <span className={styles.searchIcon}>⌕</span>
+            <input
+              type="text"
+              placeholder="Search photographers..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              aria-label="Search photographers"
             />
-          ))}
+          </div>
         </div>
-        <div className={styles.loading}>
-          <i />
-          <span>Loading more photographers...</span>
-        </div>
+
+        {photographersLoading ? (
+          <div className={styles.loading}>
+            <i />
+            <span>Loading photographers...</span>
+          </div>
+        ) : photographersError ? (
+          <p className={styles.photographerState} role="alert">
+            {photographersError}
+          </p>
+        ) : photographers.length ? (
+          <div className={styles.grid}>
+            {photographers.map((person) => (
+              <PhotographerCard
+                key={person._id}
+                person={person}
+                onSelect={openPhotographer}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className={styles.photographerState}>
+            {photographers.length > 0
+              ? "No photographers match your filters."
+              : "No photographer profiles are available yet."}
+          </p>
+        )}
       </section>
       <section className={styles.partners}>
         <h2>Our Partner Companies</h2>
@@ -365,19 +444,31 @@ export default function Home() {
             </button>
             <div className={styles.profileGallery}>
               <div className={styles.profileMainImage}>
-                <img
-                  src={selectedPhotographer.image}
+                <Image
+                  src={getImageUrl(selectedPhotographer.profileImageUrl)}
                   alt={selectedPhotographer.name}
+                  width={700}
+                  height={500}
+                  unoptimized
                 />
               </div>
               <div className={styles.profileThumbs}>
-                {heroImages.slice(0, 3).map((image, index) => (
-                  <img
-                    key={`${image}-${index}`}
-                    src={image}
+                {galleryPhotos.map((photo, index) => (
+                  <Image
+                    key={photo._id || `${photo.link}-${index}`}
+                    src={getImageUrl(photo.link)}
                     alt={`${selectedPhotographer.name} portfolio ${index + 1}`}
+                    width={160}
+                    height={90}
+                    unoptimized
                   />
                 ))}
+                {!galleryLoading && galleryPhotos.length === 0 && (
+                  <p className={styles.galleryEmpty}>
+                    This photographer has not uploaded sample photos yet.
+                  </p>
+                )}
+                {galleryLoading && <p className={styles.galleryEmpty}>Loading gallery...</p>}
               </div>
               <div className={styles.profileFacts}>
                 <p>
@@ -385,24 +476,25 @@ export default function Home() {
                   {selectedPhotographer.location}
                 </p>
                 <p>
-                  <b>Profession</b>Event Photographer
+                  <b>Profession</b>
+                  {selectedPhotographer.proffession || "Not provided"}
                 </p>
                 <p>
                   <b>Experience</b>
-                  {selectedPhotographer.experience || "5+ years"}
+                  {selectedPhotographer.experience || "Not provided"}
                 </p>
-                <p>
-                  <b>Languages</b>
-                  {selectedPhotographer.languages || "English, Hindi"}
-                </p>
-                <a href="#portfolio">View Full Portfolio ↗</a>
+                {selectedPhotographer.portfolioUrl && (
+                  <a href={selectedPhotographer.portfolioUrl} target="_blank" rel="noreferrer">
+                    View Full Portfolio ↗
+                  </a>
+                )}
               </div>
             </div>
             <div className={styles.profileDetails}>
               <div className={styles.profileHeading}>
                 <div>
                   <h2 id="profile-title">{selectedPhotographer.name}</h2>
-                  <p>Professional Photographer</p>
+                  <p>{selectedPhotographer.proffession || "Photographer"}</p>
                 </div>
                 <span className={styles.approved}>✓ Approved</span>
                 <button
@@ -417,8 +509,14 @@ export default function Home() {
               </p>
               <div className={styles.profileStats}>
                 <span>
-                  ★ <b>{selectedPhotographer.rating}</b> (
-                  {selectedPhotographer.reviews} reviews)
+                  {selectedPhotographer.rating > 0 ? (
+                    <>
+                      ★ <b>{selectedPhotographer.rating.toFixed(1)}</b> (
+                      {selectedPhotographer.reviews} reviews)
+                    </>
+                  ) : (
+                    "No reviews yet"
+                  )}
                 </span>
                 <span>
                   ♣ {selectedPhotographer.experience || "5+ years"} experience
@@ -432,10 +530,8 @@ export default function Home() {
               <div className={styles.aboutProfile}>
                 <h3>About Me</h3>
                 <p>
-                  {selectedPhotographer.bio ||
-                    "I love capturing real emotions and creating timeless memories for every client."}
+                  {selectedPhotographer.bio || "No biography provided yet."}
                 </p>
-                <small>ID: {selectedPhotographer.id || "PH00124"}</small>
               </div>
               <div className={styles.calendar}>
                 <h3>Availability Calendar ({calendarMonth.getFullYear()})</h3>
@@ -480,10 +576,14 @@ export default function Home() {
                     <b key={day}>{day}</b>
                   ))}
                   {getCalendarCells(calendarMonth).map((cell, index) => {
+                    const dateKey = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, "0")}-${String(cell.day).padStart(2, "0")}`;
                     const isBooked =
-                      cell.currentMonth && [7, 16].includes(cell.day);
+                      cell.currentMonth &&
+                      (selectedPhotographer.occupiedDates || []).some(
+                        (date) => String(date).slice(0, 10) === dateKey,
+                      );
                     const isSelected =
-                      cell.currentMonth && cell.day === selectedDate;
+                      cell.currentMonth && dateKey === selectedDate;
                     return (
                       <button
                         type="button"
@@ -498,7 +598,7 @@ export default function Home() {
                                 : styles.available
                         }
                         onClick={() =>
-                          cell.currentMonth && setSelectedDate(cell.day)
+                          cell.currentMonth && setSelectedDate(dateKey)
                         }
                         disabled={!cell.currentMonth}
                       >

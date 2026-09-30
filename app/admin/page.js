@@ -1,60 +1,49 @@
 "use client";
 
+import Image from "next/image";
 import { startTransition, useState } from "react";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 
-const initialPhotographers = [
-  {
-    id: 1,
-    name: "Rahul Singh",
-    location: "Delhi, NCR",
-    joined: "12 May 2025",
-    status: "Pending",
-    initials: "RS",
-  },
-  {
-    id: 2,
-    name: "Anita Desai",
-    location: "Mumbai",
-    joined: "11 May 2025",
-    status: "Pending",
-    initials: "AD",
-  },
-  {
-    id: 3,
-    name: "Vikram Rao",
-    location: "Bengaluru",
-    joined: "10 May 2025",
-    status: "Pending",
-    initials: "VR",
-  },
-  {
-    id: 4,
-    name: "Meera Kapoor",
-    location: "Hyderabad",
-    joined: "09 May 2025",
-    status: "Approved",
-    initials: "MK",
-  },
-  {
-    id: 5,
-    name: "Arjun Mehta",
-    location: "Mumbai",
-    joined: "08 May 2025",
-    status: "Approved",
-    initials: "AM",
-  },
-  {
-    id: 6,
-    name: "Neha Sharma",
-    location: "Chennai",
-    joined: "07 May 2025",
-    status: "Deactivated",
-    initials: "NS",
-  },
-];
+const statusLabels = {
+  pending: "Pending",
+  active: "Approved",
+  inactive: "Deactivated",
+};
+
+function getProfileImageUrl(path) {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${process.env.NEXT_PUBLIC_BACKEND_URL}${path}`;
+}
+
+function mapPhotographer(user) {
+  const name = user.name || "Unnamed photographer";
+  const status = statusLabels[user.status] || "Pending";
+  const joinedDate = user.createdAt ? new Date(user.createdAt) : null;
+
+  return {
+    id: String(user._id),
+    name,
+    email: user.email || "",
+    location:
+      [user.city, user.state, user.country].filter(Boolean).join(", ") ||
+      "Location not provided",
+    joined:
+      joinedDate && !Number.isNaN(joinedDate.getTime())
+        ? joinedDate.toLocaleDateString()
+        : "Not available",
+    status,
+    initials: name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0].toUpperCase())
+      .join(""),
+    profileImageUrl: getProfileImageUrl(user.profileImageUrl),
+  };
+}
 
 const navigation = [
   ["dashboard", "Dashboard", "⌂"],
@@ -70,11 +59,17 @@ export default function AdminPage() {
   const [hasAdminAccess, setHasAdminAccess] = useState(false);
   const [activeNav, setActiveNav] = useState("approvals");
   const [activeTab, setActiveTab] = useState("Pending");
-  const [photographers, setPhotographers] = useState(initialPhotographers);
+  const [photographers, setPhotographers] = useState([]);
+  const [isLoadingPhotographers, setIsLoadingPhotographers] = useState(true);
+  const [photographersError, setPhotographersError] = useState("");
+  const [statusError, setStatusError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [savingPhotographerId, setSavingPhotographerId] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   useEffect(() => {
+    let isCurrent = true;
     const savedUser = window.localStorage.getItem("photoConnectUser");
     if (savedUser) {
       try {
@@ -85,26 +80,105 @@ export default function AdminPage() {
           ["ADMIN", "SUPERADMIN"].includes(user.type)
         ) {
           startTransition(() => setHasAdminAccess(true));
-          return;
+          fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users?type=PHOTOGRAPHER&page=1&limit=100&sortBy=createdAt&sortOrder=desc`,
+          )
+            .then(async (response) => {
+              const result = await response.json().catch(() => null);
+              if (!response.ok) {
+                throw new Error(
+                  result?.message || "Could not load photographer records.",
+                );
+              }
+              return result;
+            })
+            .then((result) => {
+              if (isCurrent) {
+                const users = Array.isArray(result?.data) ? result.data : [];
+                setPhotographers(users.map(mapPhotographer));
+              }
+            })
+            .catch((error) => {
+              if (isCurrent) {
+                setPhotographersError(
+                  error.message || "Could not load photographer records.",
+                );
+              }
+            })
+            .finally(() => {
+              if (isCurrent) setIsLoadingPhotographers(false);
+            });
+          return () => {
+            isCurrent = false;
+          };
         }
       } catch {
         window.localStorage.removeItem("photoConnectUser");
       }
     }
     router.replace("/admin/security");
+    return () => {
+      isCurrent = false;
+    };
   }, [router]);
 
-  const visiblePhotographers = photographers.filter(
-    (photographer) => photographer.status === activeTab,
-  );
+  const filteredPhotographers = photographers.filter((photographer) => {
+    const matchesTab = photographer.status === activeTab;
+    const searchValue = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      !searchValue ||
+      [photographer.name, photographer.email, photographer.location]
+        .join(" ")
+        .toLowerCase()
+        .includes(searchValue);
+    return matchesTab && matchesSearch;
+  });
 
-  function updateStatus(id, status) {
-    setPhotographers((current) =>
-      current.map((photographer) =>
-        photographer.id === id ? { ...photographer, status } : photographer,
-      ),
-    );
+  async function updateStatus(id, status) {
+    setSavingPhotographerId(id);
+    setStatusError("");
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/${encodeURIComponent(id)}/status`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: status === "Approved" ? "active" : "inactive",
+          }),
+        },
+      );
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(result?.message || "Could not update photographer status.");
+      }
+      const updatedPhotographer = mapPhotographer(result?.data ?? result);
+      setPhotographers((current) =>
+        current.map((photographer) =>
+          photographer.id === id ? updatedPhotographer : photographer,
+        ),
+      );
+    } catch (error) {
+      setStatusError(
+        error.message || "Could not update photographer status. Please try again.",
+      );
+    } finally {
+      setSavingPhotographerId("");
+    }
   }
+
+  const pendingCount = photographers.filter(
+    (photographer) => photographer.status === "Pending",
+  ).length;
+  const approvedCount = photographers.filter(
+    (photographer) => photographer.status === "Approved",
+  ).length;
+  const deactivatedCount = photographers.filter(
+    (photographer) => photographer.status === "Deactivated",
+  ).length;
+  const approvalRate = photographers.length
+    ? Math.round((approvedCount / photographers.length) * 100)
+    : 0;
 
   if (!hasAdminAccess) return null;
 
@@ -137,7 +211,7 @@ export default function AdminPage() {
           ))}
           <button
             className={styles.navItem}
-            onClick={() => setActiveNav("logout")}
+            onClick={() => router.replace("/admin/security")}
           >
             <span className={styles.navIcon}>⇥</span>
             Logout
@@ -179,8 +253,9 @@ export default function AdminPage() {
               {notificationsOpen && (
                 <div className={styles.notificationPanel}>
                   <b>Notifications</b>
-                  <p>3 photographer applications need review.</p>
-                  <p>Banner update was published.</p>
+                  <p>
+                    {pendingCount} photographer {pendingCount === 1 ? "application needs" : "applications need"} review.
+                  </p>
                 </div>
               )}
             </div>
@@ -212,38 +287,29 @@ export default function AdminPage() {
               <span className={styles.statIconPending}>◷</span>
               <div>
                 <small>Pending review</small>
-                <strong>
-                  {
-                    photographers.filter((item) => item.status === "Pending")
-                      .length
-                  }
-                </strong>
+                <strong>{pendingCount}</strong>
               </div>
-              <b className={styles.statUp}>+12%</b>
             </div>
             <div className={styles.statCard}>
               <span className={styles.statIconApproved}>✓</span>
               <div>
-                <small>Approved this month</small>
-                <strong>25</strong>
+                <small>Approved photographers</small>
+                <strong>{approvedCount}</strong>
               </div>
-              <b className={styles.statUp}>+8%</b>
             </div>
             <div className={styles.statCard}>
               <span className={styles.statIconTotal}>♟</span>
               <div>
                 <small>Total photographers</small>
-                <strong>128</strong>
+                <strong>{photographers.length}</strong>
               </div>
-              <b className={styles.statUp}>+16%</b>
             </div>
             <div className={styles.statCard}>
               <span className={styles.statIconRate}>↗</span>
               <div>
                 <small>Approval rate</small>
-                <strong>86%</strong>
+                <strong>{approvalRate}%</strong>
               </div>
-              <b className={styles.statDown}>-2%</b>
             </div>
           </div>
 
@@ -258,6 +324,8 @@ export default function AdminPage() {
                 <input
                   placeholder="Search photographers"
                   aria-label="Search photographers"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
                 />
               </label>
             </div>
@@ -271,9 +339,13 @@ export default function AdminPage() {
                   aria-selected={activeTab === tab}
                 >
                   {tab}{" "}
-                  <span>
-                    {photographers.filter((item) => item.status === tab).length}
-                  </span>
+                  <span>{
+                    tab === "Pending"
+                      ? pendingCount
+                      : tab === "Approved"
+                        ? approvedCount
+                        : deactivatedCount
+                  }</span>
                 </button>
               ))}
             </div>
@@ -289,16 +361,50 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visiblePhotographers.map((photographer) => (
+                  {isLoadingPhotographers && (
+                    <tr>
+                      <td className={styles.empty} colSpan="5">
+                        Loading photographer records...
+                      </td>
+                    </tr>
+                  )}
+                  {!isLoadingPhotographers && photographersError && (
+                    <tr>
+                      <td className={styles.empty} colSpan="5" role="alert">
+                        {photographersError}
+                      </td>
+                    </tr>
+                  )}
+                  {!isLoadingPhotographers && !photographersError && statusError && (
+                    <tr>
+                      <td className={styles.actionError} colSpan="5" role="alert">
+                        {statusError}
+                      </td>
+                    </tr>
+                  )}
+                  {!isLoadingPhotographers &&
+                    !photographersError &&
+                    filteredPhotographers.map((photographer) => (
                     <tr key={photographer.id}>
                       <td>
                         <div className={styles.person}>
                           <span className={styles.personAvatar}>
-                            {photographer.initials}
+                            {photographer.profileImageUrl ? (
+                              <Image
+                                className={styles.personPhoto}
+                                src={photographer.profileImageUrl}
+                                alt=""
+                                width={30}
+                                height={30}
+                                unoptimized
+                              />
+                            ) : (
+                              photographer.initials
+                            )}
                           </span>
                           <div>
                             <b>{photographer.name}</b>
-                            <small>PH00{photographer.id}23</small>
+                            <small>{photographer.email}</small>
                           </div>
                         </div>
                       </td>
@@ -317,6 +423,7 @@ export default function AdminPage() {
                             <>
                               <button
                                 className={styles.approve}
+                                disabled={savingPhotographerId === photographer.id}
                                 onClick={() =>
                                   updateStatus(photographer.id, "Approved")
                                 }
@@ -325,6 +432,7 @@ export default function AdminPage() {
                               </button>
                               <button
                                 className={styles.reject}
+                                disabled={savingPhotographerId === photographer.id}
                                 onClick={() =>
                                   updateStatus(photographer.id, "Deactivated")
                                 }
@@ -336,6 +444,7 @@ export default function AdminPage() {
                           {photographer.status === "Approved" && (
                             <button
                               className={styles.secondaryAction}
+                              disabled={savingPhotographerId === photographer.id}
                               onClick={() =>
                                 updateStatus(photographer.id, "Deactivated")
                               }
@@ -346,6 +455,7 @@ export default function AdminPage() {
                           {photographer.status === "Deactivated" && (
                             <button
                               className={styles.secondaryAction}
+                              disabled={savingPhotographerId === photographer.id}
                               onClick={() =>
                                 updateStatus(photographer.id, "Approved")
                               }
@@ -357,10 +467,12 @@ export default function AdminPage() {
                       </td>
                     </tr>
                   ))}
-                  {visiblePhotographers.length === 0 && (
+                  {!isLoadingPhotographers &&
+                    !photographersError &&
+                    filteredPhotographers.length === 0 && (
                     <tr>
                       <td className={styles.empty} colSpan="5">
-                        No applications in this list.
+                        No photographers match this list.
                       </td>
                     </tr>
                   )}
@@ -369,8 +481,8 @@ export default function AdminPage() {
             </div>
           </section>
           <p className={styles.footerNote}>
-            Showing {visiblePhotographers.length} of {photographers.length}{" "}
-            applications <span>Last updated just now</span>
+            Showing {filteredPhotographers.length} of {photographers.length}{" "}
+            photographers <span>Live records</span>
           </p>
         </div>
       </section>

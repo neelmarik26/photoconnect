@@ -477,6 +477,13 @@
     font-size: 9px;
 }
 
+.personPhoto {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
 .person div {
     display: grid;
     gap: 4px;
@@ -548,6 +555,13 @@
     background: #128958;
 }
 
+.approve:disabled,
+.reject:disabled,
+.secondaryAction:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
 .reject:hover {
     background: #ca2d34;
 }
@@ -556,6 +570,13 @@
     padding: 30px !important;
     color: #8da0ad !important;
     text-align: center;
+}
+
+.actionError {
+    padding: 12px 25px !important;
+    background: #fff4f2;
+    color: #9b3930 !important;
+    font-size: 11px;
 }
 
 .footerNote {

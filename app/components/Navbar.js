@@ -171,7 +171,7 @@ export default function Navbar({ current = "home", hideAuthActions = false }) {
                 : ""
             }`}
           >
-  g          {current !== "signin" && <Link href="/signin">Sign In</Link>}
+            {current !== "signin" && <Link href="/signin">Sign In</Link>}
             {current !== "signup" && <Link href="/signup">Sign Up</Link>}
           </div>
         ))}

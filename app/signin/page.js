@@ -2,15 +2,54 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "../auth.module.css";
 import Navbar from "../components/Navbar";
 
 export default function SignInPage() {
+  const router = useRouter();
   const [signedIn, setSignedIn] = useState(false);
 
-  function submitForm(event) {
+  async function submitForm(event) {
     event.preventDefault();
-    setSignedIn(true);
+    const formData = new FormData(event.currentTarget);
+    const credentials = {
+      email: formData.get("email"),
+      password: formData.get("password"),
+    };
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/login`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(credentials),
+        },
+      );
+      const result = await response.json().catch(() => null);
+      console.log("Login response:", result);
+      if (response.ok && result?._id) {
+        window.localStorage.setItem(
+          "photoConnectUser",
+          JSON.stringify({
+            userId: String(result._id),
+            name: result.name,
+            profileImageUrl: result.profileImageUrl,
+            type: result.type,
+            expiresAt: Date.now() + 10 * 24 * 60 * 60 * 1000,
+          }),
+        );
+        router.push("/");
+        return;
+      }
+      setSignedIn(false);
+    } catch (error) {
+      console.error("Login request failed:", error);
+      setSignedIn(false);
+    }
   }
 
   return (
@@ -25,12 +64,18 @@ export default function SignInPage() {
           <form className={styles.form} onSubmit={submitForm}>
             <label className={styles.field}>
               Email Address
-              <input required type="email" placeholder="Enter your email" />
+              <input
+                required
+                name="email"
+                type="email"
+                placeholder="Enter your email"
+              />
             </label>
             <label className={styles.field}>
               Password
               <input
                 required
+                name="password"
                 type="password"
                 placeholder="Enter your password"
               />

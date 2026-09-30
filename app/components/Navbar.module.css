@@ -70,12 +70,125 @@
   color: #fff;
   font-size: 12px;
 }
+.singleAction a {
+  min-width: 104px;
+}
 .actions a:last-child {
   border-color: #1878f2;
   background: #1878f2;
 }
 .actions a:hover {
   border-color: #8dc5ff;
+}
+.userProfile {
+  position: relative;
+  min-width: 0;
+  margin-left: 12px;
+  color: #fff;
+}
+.profileTrigger {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 10px;
+  padding: 3px 0 3px 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.profileTrigger:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid #8dc5ff;
+  outline-offset: 3px;
+}
+.profileAvatar,
+.profileAvatarFallback {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border: 1px solid #778894;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.profileAvatarFallback {
+  display: grid;
+  place-items: center;
+  background: #1878f2;
+  font-size: 14px;
+  font-weight: bold;
+}
+.userName {
+  max-width: 150px;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profileChevron {
+  color: #b8cbd0;
+  font-size: 12px;
+  transition: transform 160ms ease;
+}
+.profileTrigger[aria-expanded="true"] .profileChevron {
+  transform: rotate(180deg);
+}
+.profileDropdown {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 176px;
+  padding: 5px;
+  border: 1px solid #d9e3e8;
+  border-radius: 5px;
+  background: #fff;
+  box-shadow: 0 10px 24px rgb(0 20 30 / 20%);
+  color: #183640;
+  transform-origin: top right;
+  animation: profileDropdownEnter 150ms ease-out;
+}
+.profileDropdown a,
+.profileDropdown button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  padding: 10px 11px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.profileDropdown a:hover,
+.profileDropdown button:hover {
+  background: #eef4f5;
+}
+.profileDropdown button {
+  color: #a63232;
+}
+@keyframes profileDropdownEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .profileDropdown {
+    animation: none;
+  }
+  .profileChevron {
+    transition: none;
+  }
 }
 @media (max-width: 600px) {
   .header {
@@ -140,6 +253,26 @@
   .actions {
     gap: 5px;
     margin-left: 0;
+  }
+  .userProfile {
+    margin-left: 0;
+  }
+  .profileTrigger {
+    min-height: 36px;
+    gap: 6px;
+  }
+  .profileAvatar,
+  .profileAvatarFallback {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+  .userName {
+    max-width: 82px;
+    font-size: 10px;
+  }
+  .profileDropdown {
+    top: calc(100% + 7px);
   }
   .actions a {
     padding: 7px 9px;

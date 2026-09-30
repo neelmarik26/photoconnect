@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useState } from "react";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 
 const initialPhotographers = [
@@ -64,11 +66,33 @@ const navigation = [
 ];
 
 export default function AdminPage() {
+  const router = useRouter();
+  const [hasAdminAccess, setHasAdminAccess] = useState(false);
   const [activeNav, setActiveNav] = useState("approvals");
   const [activeTab, setActiveTab] = useState("Pending");
   const [photographers, setPhotographers] = useState(initialPhotographers);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  useEffect(() => {
+    const savedUser = window.localStorage.getItem("photoConnectUser");
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        if (
+          user.userId &&
+          user.expiresAt > Date.now() &&
+          ["ADMIN", "SUPERADMIN"].includes(user.type)
+        ) {
+          startTransition(() => setHasAdminAccess(true));
+          return;
+        }
+      } catch {
+        window.localStorage.removeItem("photoConnectUser");
+      }
+    }
+    router.replace("/admin/security");
+  }, [router]);
 
   const visiblePhotographers = photographers.filter(
     (photographer) => photographer.status === activeTab,
@@ -81,6 +105,8 @@ export default function AdminPage() {
       ),
     );
   }
+
+  if (!hasAdminAccess) return null;
 
   return (
     <main className={styles.admin}>

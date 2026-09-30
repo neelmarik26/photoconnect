@@ -124,7 +124,7 @@ export default function OtpPage() {
       window.sessionStorage.removeItem("otpResendAttempts");
       window.sessionStorage.removeItem("otpResendAvailableAt");
       
-      router.push("/profile-details");
+      router.push("/profile-update");
     } catch {
       setMessage("Could not connect to the server. Please try again.");
     }

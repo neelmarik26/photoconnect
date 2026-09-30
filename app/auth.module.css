@@ -122,6 +122,15 @@
   font-size: 11px;
   font-weight: bold;
 }
+.profileForm .field > div > span[aria-hidden="true"] {
+  color: #c4473b;
+}
+.fieldError {
+  color: #c4473b;
+  font-size: 10px;
+  font-weight: normal;
+  line-height: 1.4;
+}
 .field input {
   width: 100%;
   padding: 11px 12px;
@@ -216,6 +225,10 @@
   transition: stroke-dashoffset 220ms ease;
 }
 .submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
   margin-top: 4px;
   padding: 12px;
   border: 0;
@@ -228,6 +241,23 @@
 }
 .submit:hover {
   background: #1878f2;
+}
+.submit:disabled {
+  cursor: wait;
+  opacity: 0.8;
+}
+.submitLoader {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgb(255 255 255 / 40%);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: submitSpin 700ms linear infinite;
+}
+@keyframes submitSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .switch {
   margin-top: 18px;
@@ -400,7 +430,7 @@
   font-weight: bold;
 }
 .profileFileLabel span {
-  color: #16806c;
+  color: #c4473b;
 }
 .fileDropzone {
   position: relative;

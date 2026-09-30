@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Swal from "sweetalert2";
 import styles from "../auth.module.css";
 import Navbar from "../components/Navbar";
 
 export default function ProfileDetailsPage() {
   const router = useRouter();
   const [message, setMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
   const [emailMissing, setEmailMissing] = useState(false);
   const [phone, setPhone] = useState("");
   const [selectedFileName, setSelectedFileName] = useState("");
@@ -18,10 +20,39 @@ export default function ProfileDetailsPage() {
     setMessage("");
     setEmailMissing(false);
 
-    if (phone && phone.length !== 10) {
-      setMessage("Enter a 10-digit phone number.");
-      return;
+    const formData = new FormData(event.currentTarget);
+    const file = formData.get("file");
+    const nextFieldErrors = {};
+    const requiredFields = [
+      ["phone", "phone number"],
+      ["country", "country"],
+      ["state", "state"],
+      ["city", "city"],
+      ["address1", "address 1"],
+      ["file", "profile image"],
+    ];
+
+    for (const [fieldName, label] of requiredFields) {
+      const value = formData.get(fieldName);
+      const isMissing =
+        fieldName === "file"
+          ? !value || value.size === 0
+          : !String(value ?? "").trim();
+      if (isMissing) nextFieldErrors[fieldName] = `Your ${label} is missing.`;
     }
+
+    const phoneValue = String(formData.get("phone") ?? "").trim();
+    if (phoneValue && !/^\d{10}$/.test(phoneValue)) {
+      nextFieldErrors.phone = "Enter a 10-digit phone number.";
+    }
+    if (file?.size && !file.type.startsWith("image/")) {
+      nextFieldErrors.file = "Choose an image file.";
+    } else if (file?.size > 5 * 1024 * 1024) {
+      nextFieldErrors.file = "Image must be 5 MB or smaller.";
+    }
+
+    setFieldErrors(nextFieldErrors);
+    if (Object.keys(nextFieldErrors).length > 0) return;
 
     const email = window.sessionStorage.getItem("signupEmail")?.trim();
     if (!email) {
@@ -30,13 +61,8 @@ export default function ProfileDetailsPage() {
       return;
     }
 
-    const formData = new FormData(event.currentTarget);
     formData.set("email", email);
-    const file = formData.get("file");
-    if (!file?.type.startsWith("image/")) {
-      setMessage("Choose an image file to continue.");
-      return;
-    }
+    formData.set("type", "PHOTOGRAPHER");
 
     setIsSaving(true);
     try {
@@ -61,7 +87,7 @@ export default function ProfileDetailsPage() {
         coordinates.longitude === null ? "null" : String(coordinates.longitude),
       );
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/second`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/profileSetup`,
         {
           method: "POST",
           body: formData,
@@ -77,9 +103,28 @@ export default function ProfileDetailsPage() {
         return;
       }
 
+      const user = result?.data;
+      if (user?._id) {
+        window.localStorage.setItem(
+          "photoConnectUser",
+          JSON.stringify({
+            userId: String(user._id),
+            name: user.name,
+            profileImageUrl: user.profileImageUrl,
+            expiresAt: Date.now() + 10 * 24 * 60 * 60 * 1000,
+          }),
+        );
+      }
       window.sessionStorage.removeItem("signupEmail");
-      setMessage(result?.message || "Profile details saved successfully.");
-      //  redirect the user to the home page after a short delay
+      const confirmation = await Swal.fire({
+        icon: "success",
+        title: "Profile saved",
+        text: result?.message || "Profile details saved successfully.",
+        confirmButtonText: "Go to Home",
+      });
+      if (confirmation.isConfirmed) {
+        router.push("/");
+      }
     } catch {
       setMessage("Could not connect to the server. Please try again.");
     } finally {
@@ -95,30 +140,10 @@ export default function ProfileDetailsPage() {
           <div className={styles.heading}>
             <p className={styles.eyebrow}>PROFILE SETUP</p>
             <h1>Tell us about yourself</h1>
-            <p>Add your contact details and choose an account type.</p>
+            <p>Add your contact details and profile image.</p>
           </div>
 
-          <form className={styles.profileForm} onSubmit={submitDetails}>
-            <label className={styles.field}>
-              <div>
-                Type <span aria-hidden="true">*</span>
-              </div>
-              <select
-                className={styles.typeSelect}
-                name="type"
-                defaultValue=""
-                required
-              >
-                <option value="" disabled>
-                  Choose an account type
-                </option>
-                <option value="ADMIN">ADMIN</option>
-                <option value="PHOTOGRAPHER">PHOTOGRAPHER</option>
-                <option value="PARTNER">PARTNER</option>
-                <option value="SUPERADMIN">SUPER-ADMIN</option>
-              </select>
-            </label>
-
+          <form className={styles.profileForm} onSubmit={submitDetails} noValidate>
             <label className={styles.field}>
               <div>
                 Phone <span aria-hidden="true">*</span>
@@ -131,6 +156,9 @@ export default function ProfileDetailsPage() {
                 pattern="[0-9]{10}"
                 placeholder="10-digit phone number"
                 value={phone}
+                required
+                aria-invalid={Boolean(fieldErrors.phone)}
+                aria-describedby={fieldErrors.phone ? "phone-error" : undefined}
                 onChange={(event) => {
                   let digits = event.target.value.replace(/\D/g, "");
                   if (digits.length > 10 && digits.startsWith("0")) {
@@ -138,8 +166,10 @@ export default function ProfileDetailsPage() {
                   }
                   setPhone(digits.slice(0, 10));
                   setMessage("");
+                  setFieldErrors((errors) => ({ ...errors, phone: "" }));
                 }}
               />
+              {fieldErrors.phone && <span className={styles.fieldError} id="phone-error">{fieldErrors.phone}</span>}
             </label>
 
             <label className={styles.field}>
@@ -149,22 +179,61 @@ export default function ProfileDetailsPage() {
               <input
                 name="country"
                 type="text"
+                required
                 placeholder="Enter your country"
+                aria-invalid={Boolean(fieldErrors.country)}
+                aria-describedby={fieldErrors.country ? "country-error" : undefined}
+                onChange={() => setFieldErrors((errors) => ({ ...errors, country: "" }))}
               />
+              {fieldErrors.country && <span className={styles.fieldError} id="country-error">{fieldErrors.country}</span>}
+            </label>
+
+            <label className={styles.field}>
+              <div>
+                State <span aria-hidden="true">*</span>
+              </div>
+              <input
+                name="state"
+                type="text"
+                required
+                placeholder="Enter your state"
+                aria-invalid={Boolean(fieldErrors.state)}
+                aria-describedby={fieldErrors.state ? "state-error" : undefined}
+                onChange={() => setFieldErrors((errors) => ({ ...errors, state: "" }))}
+              />
+              {fieldErrors.state && <span className={styles.fieldError} id="state-error">{fieldErrors.state}</span>}
             </label>
 
             <label className={styles.field}>
               <div>
                 City <span aria-hidden="true">*</span>
               </div>
-              <input name="city" type="text" placeholder="Enter your city" />
+              <input
+                name="city"
+                type="text"
+                required
+                placeholder="Enter your city"
+                aria-invalid={Boolean(fieldErrors.city)}
+                aria-describedby={fieldErrors.city ? "city-error" : undefined}
+                onChange={() => setFieldErrors((errors) => ({ ...errors, city: "" }))}
+              />
+              {fieldErrors.city && <span className={styles.fieldError} id="city-error">{fieldErrors.city}</span>}
             </label>
 
             <label className={styles.field}>
               <div>
                 Address 1 <span aria-hidden="true">*</span>
               </div>
-              <input name="address1" type="text" placeholder="Street address" />
+              <input
+                name="address1"
+                type="text"
+                required
+                placeholder="Street address"
+                aria-invalid={Boolean(fieldErrors.address1)}
+                aria-describedby={fieldErrors.address1 ? "address1-error" : undefined}
+                onChange={() => setFieldErrors((errors) => ({ ...errors, address1: "" }))}
+              />
+              {fieldErrors.address1 && <span className={styles.fieldError} id="address1-error">{fieldErrors.address1}</span>}
             </label>
 
             <label className={styles.field}>
@@ -190,11 +259,14 @@ export default function ProfileDetailsPage() {
                   accept="image/*"
                   aria-label="Choose a profile image"
                   required
+                  aria-invalid={Boolean(fieldErrors.file)}
+                  aria-describedby={fieldErrors.file ? "file-error" : undefined}
                   onChange={(event) => {
                     setSelectedFileName(
                       event.currentTarget.files?.[0]?.name ?? "",
                     );
                     setMessage("");
+                    setFieldErrors((errors) => ({ ...errors, file: "" }));
                   }}
                 />
                 <span className={styles.uploadIcon} aria-hidden="true">
@@ -216,6 +288,7 @@ export default function ProfileDetailsPage() {
                   {selectedFileName ? "Change" : "Browse files"}
                 </span>
               </label>
+              {fieldErrors.file && <span className={styles.fieldError} id="file-error">{fieldErrors.file}</span>}
             </div>
 
             {message && (
@@ -234,13 +307,15 @@ export default function ProfileDetailsPage() {
               </button>
             )}
 
-            <button
-              className={`${styles.submit} ${styles.profileFieldWide}`}
-              type="submit"
-              disabled={isSaving}
-            >
-              {isSaving ? "Saving details..." : "Save details"}
-            </button>
+            {!emailMissing && (
+              <button
+                className={`${styles.submit} ${styles.profileFieldWide}`}
+                type="submit"
+                disabled={isSaving}
+              >
+                {isSaving ? "Saving details..." : "Save details"}
+              </button>
+            )}
           </form>
         </div>
       </section>

@@ -39,10 +39,12 @@ export default function SignInPage() {
             name: result.name,
             profileImageUrl: result.profileImageUrl,
             type: result.type,
+            accessToken: result.accessToken,
+            accountCollection: result.accountCollection,
             expiresAt: Date.now() + 10 * 24 * 60 * 60 * 1000,
           }),
         );
-        router.push("/");
+        router.push(["ADMIN", "SUPERADMIN"].includes(result.type) ? "/admin" : "/");
         return;
       }
       setSignedIn(false);

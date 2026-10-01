@@ -42,19 +42,6 @@ export default function PhotographerCard({ person, onSelect }) {
           </p>
         </div>
       </button>
-      <button
-        className={styles.cardSave}
-        type="button"
-        aria-label={`Save ${person.name}`}
-        aria-pressed="false"
-        onClick={(event) => {
-          const isSaved = event.currentTarget.getAttribute("aria-pressed") === "true";
-          event.currentTarget.setAttribute("aria-pressed", String(!isSaved));
-          event.currentTarget.classList.toggle(styles.saved, !isSaved);
-        }}
-      >
-        ♡
-      </button>
     </article>
   );
 }

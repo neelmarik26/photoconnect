@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ReactTags } from "react-tag-autocomplete";
 import Navbar from "../components/Navbar";
 import styles from "./page.module.css";
 
@@ -34,7 +35,7 @@ const editableSections = [
     title: "Photographer profile",
     fields: [
       ["proffession", "Profession", "text"],
-      ["specialties", "Specialties (comma-separated)", "text"],
+      ["specialties", "Specialties", "text"],
       ["experienceYears", "Experience (years)", "number"],
       ["dob", "Date of birth", "date"],
       ["portfolioUrl", "Portfolio", "url"],
@@ -90,7 +91,9 @@ function formatValue(field, value) {
   }
   if (field === "dob") {
     const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
-    return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleDateString();
+    return Number.isNaN(date.getTime())
+      ? String(value)
+      : date.toLocaleDateString();
   }
   if (field === "experienceYears") {
     return `${value} years`;
@@ -101,13 +104,35 @@ function formatValue(field, value) {
   return String(value);
 }
 
+function SpecialtyTags({ value }) {
+  const specialties = (Array.isArray(value) ? value : value ? String(value).split(",") : [])
+    .map((specialty) => String(specialty).trim())
+    .filter(Boolean);
+
+  if (specialties.length === 0) return "Not provided";
+
+  return (
+    <div className={styles.profileSpecialtyTags}>
+      {specialties.map((specialty, index) => (
+        <span
+          className={styles.profileSpecialtyTag}
+          key={`${specialty}-${index}`}
+        >
+          {specialty}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function getEditValue(profile, field) {
   if (field === "specialties") {
     return Array.isArray(profile.specialties)
       ? profile.specialties.join(", ")
-      : profile.specialties ?? "";
+      : (profile.specialties ?? "");
   }
-  if (field === "dob") return profile.dob ? String(profile.dob).slice(0, 10) : "";
+  if (field === "dob")
+    return profile.dob ? String(profile.dob).slice(0, 10) : "";
   return profile[field] ?? "";
 }
 
@@ -142,6 +167,7 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [specialtyTags, setSpecialtyTags] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [saveMessageIsError, setSaveMessageIsError] = useState(false);
@@ -412,9 +438,8 @@ export default function ProfilePage() {
       address2: value("address2"),
       pincode: pincode ? Number(pincode) : null,
       proffession: value("proffession"),
-      specialties: value("specialties")
-        .split(",")
-        .map((specialty) => specialty.trim())
+      specialties: specialtyTags
+        .map((tag) => tag.label.trim())
         .filter(Boolean),
       experienceYears: experienceYears ? Number(experienceYears) : null,
       dob: value("dob") || null,
@@ -431,7 +456,9 @@ export default function ProfilePage() {
             : currentValue
               ? [currentValue]
               : [];
-          return JSON.stringify(nextValue) !== JSON.stringify(currentSpecialties);
+          return (
+            JSON.stringify(nextValue) !== JSON.stringify(currentSpecialties)
+          );
         }
         if (field === "dob") {
           const currentDate = currentValue
@@ -440,9 +467,10 @@ export default function ProfilePage() {
           return nextValue !== currentDate;
         }
         if (field === "pincode" || field === "experienceYears") {
-          const currentNumber = currentValue === null || currentValue === undefined
-            ? null
-            : Number(currentValue);
+          const currentNumber =
+            currentValue === null || currentValue === undefined
+              ? null
+              : Number(currentValue);
           return nextValue !== currentNumber;
         }
         return String(nextValue ?? "") !== String(currentValue ?? "");
@@ -514,13 +542,17 @@ export default function ProfilePage() {
   async function saveSamplePhotos() {
     setSampleMessage("");
     if (galleryLoadFailed) {
-      setSampleMessage("Could not load your saved sample photos. Reload this page before editing them.");
+      setSampleMessage(
+        "Could not load your saved sample photos. Reload this page before editing them.",
+      );
       setSampleMessageIsError(true);
       return;
     }
     if (
       sampleFiles.some(
-        (file) => file && (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024),
+        (file) =>
+          file &&
+          (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024),
       )
     ) {
       setSampleMessage("Choose image files no larger than 5 MB each.");
@@ -538,7 +570,9 @@ export default function ProfilePage() {
       return;
     }
     if (sampleFiles.some((file, index) => !file && !galleryPhotos[index])) {
-      setSampleMessage("Add a photo to each of the three sample slots before saving.");
+      setSampleMessage(
+        "Add a photo to each of the three sample slots before saving.",
+      );
       setSampleMessageIsError(true);
       return;
     }
@@ -685,6 +719,17 @@ export default function ProfilePage() {
                     const currentDob = profile.dob
                       ? String(profile.dob).slice(0, 10)
                       : "";
+                    const currentSpecialties = Array.isArray(profile.specialties)
+                      ? profile.specialties
+                      : profile.specialties
+                        ? String(profile.specialties).split(",")
+                        : [];
+                    setSpecialtyTags(
+                      [...new Set(currentSpecialties.map((tag) => String(tag).trim()).filter(Boolean))].map((label) => ({
+                        label,
+                        value: label,
+                      })),
+                    );
                     const selectedDob = currentDob
                       ? new Date(`${currentDob}T00:00:00`)
                       : new Date();
@@ -711,7 +756,9 @@ export default function ProfilePage() {
             )}
           </header>
 
-          {isLoading && <p className={styles.stateMessage}>Loading profile...</p>}
+          {isLoading && (
+            <p className={styles.stateMessage}>Loading profile...</p>
+          )}
           {!isLoading && errorMessage && (
             <div className={styles.errorState} role="alert">
               <p>{errorMessage}</p>
@@ -726,184 +773,265 @@ export default function ProfilePage() {
                   <h2>{section.title}</h2>
                   <div className={styles.editGrid}>
                     {section.fields.map(([field, label, type]) => (
-                        <div
+                      <div
                         className={`${styles.editField} ${type === "textarea" ? styles.editFieldWide : ""}`}
                         key={field}
                       >
-                          <label className={styles.editLabel} htmlFor={field === "dob" ? "dob-picker" : field}>
-                            {label}
-                          </label>
+                        <label
+                          className={styles.editLabel}
+                          htmlFor={
+                            field === "dob"
+                              ? "dob-picker"
+                              : field === "specialties"
+                                ? "specialties-tags-input"
+                                : field
+                          }
+                        >
+                          {label}
+                        </label>
                         {type === "textarea" ? (
                           <textarea
-                              id={field}
+                            id={field}
                             name={field}
                             rows={4}
                             defaultValue={getEditValue(profile, field)}
                           />
-                          ) : field === "dob" ? (
-                            <div className={styles.datePicker} ref={calendarRef}>
-                              <input type="hidden" name="dob" value={dobValue} />
-                              <button
-                                className={styles.datePickerTrigger}
-                                id="dob-picker"
-                                type="button"
-                                aria-haspopup="dialog"
-                                aria-expanded={isCalendarOpen}
-                                aria-controls="dob-calendar"
-                                onClick={() => setIsCalendarOpen((open) => !open)}
+                        ) : field === "specialties" ? (
+                          <ReactTags
+                            id="specialties-tags"
+                            classNames={{
+                              root: styles.tagInput,
+                              tagList: styles.tagList,
+                              tagListItem: styles.tagListItem,
+                              tag: styles.tag,
+                              tagName: styles.tagName,
+                              comboBox: styles.tagComboBox,
+                              input: styles.tagTextInput,
+                            }}
+                            labelText={label}
+                            placeholderText="Type and press Enter"
+                            activateFirstOption
+                            allowNew
+                            allowResize={false}
+                            renderInput={({ classNames, inputWidth, ...inputProps }) => (
+                              <input
+                                {...inputProps}
+                                className={classNames.input}
+                                style={{ width: inputWidth }}
+                                onKeyDown={(event) => {
+                                  inputProps.onKeyDown?.(event);
+                                  if (event.key === "Enter") {
+                                    event.preventDefault();
+                                  }
+                                }}
+                              />
+                            )}
+                            selected={specialtyTags}
+                            onAdd={(tag) =>
+                              setSpecialtyTags((currentTags) =>
+                                currentTags.some(
+                                  (currentTag) =>
+                                    currentTag.label.toLowerCase() ===
+                                    tag.label.toLowerCase(),
+                                )
+                                  ? currentTags
+                                  : [...currentTags, tag],
+                              )
+                            }
+                            onDelete={(tagIndex) =>
+                              setSpecialtyTags((currentTags) =>
+                                currentTags.filter((_, index) => index !== tagIndex),
+                              )
+                            }
+                          />
+                        ) : field === "dob" ? (
+                          <div className={styles.datePicker} ref={calendarRef}>
+                            <input type="hidden" name="dob" value={dobValue} />
+                            <button
+                              className={styles.datePickerTrigger}
+                              id="dob-picker"
+                              type="button"
+                              aria-haspopup="dialog"
+                              aria-expanded={isCalendarOpen}
+                              aria-controls="dob-calendar"
+                              onClick={() => setIsCalendarOpen((open) => !open)}
+                            >
+                              <span>{displayDate(dobValue)}</span>
+                              <span aria-hidden="true">▦</span>
+                            </button>
+                            {isCalendarOpen && (
+                              <div
+                                className={styles.calendarPopup}
+                                id="dob-calendar"
+                                role="dialog"
+                                aria-label="Date of birth calendar"
                               >
-                                <span>{displayDate(dobValue)}</span>
-                                <span aria-hidden="true">▦</span>
-                              </button>
-                              {isCalendarOpen && (
-                                <div
-                                  className={styles.calendarPopup}
-                                  id="dob-calendar"
-                                  role="dialog"
-                                  aria-label="Date of birth calendar"
-                                >
-                                  <div className={styles.calendarHeader}>
-                                    <button
-                                      className={styles.calendarArrow}
-                                      type="button"
-                                      aria-label="Previous month"
-                                      disabled={
-                                        calendarYear === 1900 && calendarMonthIndex === 0
-                                      }
-                                      onClick={() =>
-                                        setCalendarMonth(
-                                          new Date(calendarYear, calendarMonthIndex - 1, 1),
-                                        )
-                                      }
-                                    >
-                                      ‹
-                                    </button>
-                                    <select
-                                      aria-label="Month"
-                                      value={calendarMonthIndex}
-                                      onChange={(event) =>
-                                        setCalendarMonth(
-                                          new Date(
-                                            calendarYear,
-                                            Number(event.target.value),
-                                            1,
-                                          ),
-                                        )
-                                      }
-                                    >
-                                      {monthNames.map((monthName, monthIndex) => (
-                                        <option
-                                          value={monthIndex}
-                                          key={monthName}
-                                          disabled={
-                                            calendarYear === currentMonth.getFullYear() &&
-                                            monthIndex > currentMonth.getMonth()
-                                          }
-                                        >
-                                          {monthName}
-                                        </option>
-                                      ))}
-                                    </select>
-                                    <select
-                                      aria-label="Year"
-                                      value={calendarYear}
-                                      onChange={(event) => {
-                                        const selectedYear = Number(event.target.value);
-                                        const selectedMonth =
-                                          selectedYear === currentMonth.getFullYear()
-                                            ? Math.min(
-                                                calendarMonthIndex,
-                                                currentMonth.getMonth(),
-                                              )
-                                            : calendarMonthIndex;
-                                        setCalendarMonth(
-                                          new Date(selectedYear, selectedMonth, 1),
-                                        );
-                                      }}
-                                    >
-                                      {yearOptions.map((year) => (
-                                        <option value={year} key={year}>
-                                          {year}
-                                        </option>
-                                      ))}
-                                    </select>
-                                    <button
-                                      className={styles.calendarArrow}
-                                      type="button"
-                                      aria-label="Next month"
-                                      disabled={
-                                        calendarYear > currentMonth.getFullYear() ||
-                                        (calendarYear === currentMonth.getFullYear() &&
-                                          calendarMonthIndex >= currentMonth.getMonth())
-                                      }
-                                      onClick={() =>
-                                        setCalendarMonth(
-                                          new Date(calendarYear, calendarMonthIndex + 1, 1),
-                                        )
-                                      }
-                                    >
-                                      ›
-                                    </button>
-                                  </div>
-                                  <div className={styles.calendarGrid}>
-                                    {[
-                                      "Sun",
-                                      "Mon",
-                                      "Tue",
-                                      "Wed",
-                                      "Thu",
-                                      "Fri",
-                                      "Sat",
-                                    ].map((weekday) => (
-                                      <span
-                                        className={styles.calendarWeekday}
-                                        key={weekday}
-                                      >
-                                        {weekday}
-                                      </span>
-                                    ))}
-                                    {calendarDays.map((day, index) => {
-                                      if (day === null) {
-                                        return <span key={`empty-${index}`} />;
-                                      }
-                                      const dayValue = toDateValue(
-                                        new Date(calendarYear, calendarMonthIndex, day),
-                                      );
-                                      const isSelected = dayValue === dobValue;
-                                      return (
-                                        <button
-                                          className={`${styles.calendarDay} ${isSelected ? styles.calendarDaySelected : ""}`}
-                                          key={dayValue}
-                                          type="button"
-                                          aria-label={displayDate(dayValue)}
-                                          aria-pressed={isSelected}
-                                          disabled={dayValue > todayValue}
-                                          onClick={() => {
-                                            setDobValue(dayValue);
-                                            setIsCalendarOpen(false);
-                                          }}
-                                        >
-                                          {day}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
+                                <div className={styles.calendarHeader}>
                                   <button
-                                    className={styles.calendarClear}
+                                    className={styles.calendarArrow}
                                     type="button"
-                                    onClick={() => {
-                                      setDobValue("");
-                                      setIsCalendarOpen(false);
+                                    aria-label="Previous month"
+                                    disabled={
+                                      calendarYear === 1900 &&
+                                      calendarMonthIndex === 0
+                                    }
+                                    onClick={() =>
+                                      setCalendarMonth(
+                                        new Date(
+                                          calendarYear,
+                                          calendarMonthIndex - 1,
+                                          1,
+                                        ),
+                                      )
+                                    }
+                                  >
+                                    ‹
+                                  </button>
+                                  <select
+                                    aria-label="Month"
+                                    value={calendarMonthIndex}
+                                    onChange={(event) =>
+                                      setCalendarMonth(
+                                        new Date(
+                                          calendarYear,
+                                          Number(event.target.value),
+                                          1,
+                                        ),
+                                      )
+                                    }
+                                  >
+                                    {monthNames.map((monthName, monthIndex) => (
+                                      <option
+                                        value={monthIndex}
+                                        key={monthName}
+                                        disabled={
+                                          calendarYear ===
+                                            currentMonth.getFullYear() &&
+                                          monthIndex > currentMonth.getMonth()
+                                        }
+                                      >
+                                        {monthName}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <select
+                                    aria-label="Year"
+                                    value={calendarYear}
+                                    onChange={(event) => {
+                                      const selectedYear = Number(
+                                        event.target.value,
+                                      );
+                                      const selectedMonth =
+                                        selectedYear ===
+                                        currentMonth.getFullYear()
+                                          ? Math.min(
+                                              calendarMonthIndex,
+                                              currentMonth.getMonth(),
+                                            )
+                                          : calendarMonthIndex;
+                                      setCalendarMonth(
+                                        new Date(
+                                          selectedYear,
+                                          selectedMonth,
+                                          1,
+                                        ),
+                                      );
                                     }}
                                   >
-                                    Clear date
+                                    {yearOptions.map((year) => (
+                                      <option value={year} key={year}>
+                                        {year}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  <button
+                                    className={styles.calendarArrow}
+                                    type="button"
+                                    aria-label="Next month"
+                                    disabled={
+                                      calendarYear >
+                                        currentMonth.getFullYear() ||
+                                      (calendarYear ===
+                                        currentMonth.getFullYear() &&
+                                        calendarMonthIndex >=
+                                          currentMonth.getMonth())
+                                    }
+                                    onClick={() =>
+                                      setCalendarMonth(
+                                        new Date(
+                                          calendarYear,
+                                          calendarMonthIndex + 1,
+                                          1,
+                                        ),
+                                      )
+                                    }
+                                  >
+                                    ›
                                   </button>
                                 </div>
-                              )}
-                            </div>
+                                <div className={styles.calendarGrid}>
+                                  {[
+                                    "Sun",
+                                    "Mon",
+                                    "Tue",
+                                    "Wed",
+                                    "Thu",
+                                    "Fri",
+                                    "Sat",
+                                  ].map((weekday) => (
+                                    <span
+                                      className={styles.calendarWeekday}
+                                      key={weekday}
+                                    >
+                                      {weekday}
+                                    </span>
+                                  ))}
+                                  {calendarDays.map((day, index) => {
+                                    if (day === null) {
+                                      return <span key={`empty-${index}`} />;
+                                    }
+                                    const dayValue = toDateValue(
+                                      new Date(
+                                        calendarYear,
+                                        calendarMonthIndex,
+                                        day,
+                                      ),
+                                    );
+                                    const isSelected = dayValue === dobValue;
+                                    return (
+                                      <button
+                                        className={`${styles.calendarDay} ${isSelected ? styles.calendarDaySelected : ""}`}
+                                        key={dayValue}
+                                        type="button"
+                                        aria-label={displayDate(dayValue)}
+                                        aria-pressed={isSelected}
+                                        disabled={dayValue > todayValue}
+                                        onClick={() => {
+                                          setDobValue(dayValue);
+                                          setIsCalendarOpen(false);
+                                        }}
+                                      >
+                                        {day}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                <button
+                                  className={styles.calendarClear}
+                                  type="button"
+                                  onClick={() => {
+                                    setDobValue("");
+                                    setIsCalendarOpen(false);
+                                  }}
+                                >
+                                  Clear date
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <input
-                              id={field}
+                            id={field}
                             name={field}
                             type={type}
                             defaultValue={getEditValue(profile, field)}
@@ -911,7 +1039,11 @@ export default function ProfilePage() {
                             min={field === "experienceYears" ? "0" : undefined}
                             minLength={field === "name" ? "2" : undefined}
                             maxLength={field === "name" ? "100" : undefined}
-                            step={field === "experienceYears" || field === "pincode" ? "1" : undefined}
+                            step={
+                              field === "experienceYears" || field === "pincode"
+                                ? "1"
+                                : undefined
+                            }
                           />
                         )}
                       </div>
@@ -944,7 +1076,9 @@ export default function ProfilePage() {
                   </div>
                   <div className={styles.imageUploadContent}>
                     <strong>
-                      {selectedImageFile ? "New image selected" : "Current profile image"}
+                      {selectedImageFile
+                        ? "New image selected"
+                        : "Current profile image"}
                     </strong>
                     <p>Choose a JPG, PNG, or WebP image. Maximum size: 5 MB.</p>
                     <div className={styles.imageUploadActions}>
@@ -964,7 +1098,9 @@ export default function ProfilePage() {
                           }}
                         />
                         <span>
-                          {selectedImageFile ? "Choose another" : "Choose photo"}
+                          {selectedImageFile
+                            ? "Choose another"
+                            : "Choose photo"}
                         </span>
                       </label>
                       {selectedImageFile && (
@@ -1002,7 +1138,8 @@ export default function ProfilePage() {
                     {sampleFiles.map((file, index) => {
                       const savedPhoto = galleryPhotos[index];
                       const previewUrl = samplePreviewUrls[index];
-                      const imageUrl = previewUrl || getGalleryImageUrl(savedPhoto?.link);
+                      const imageUrl =
+                        previewUrl || getGalleryImageUrl(savedPhoto?.link);
                       return (
                         <article className={styles.samplePhotoSlot} key={index}>
                           <div className={styles.samplePhotoPreview}>
@@ -1036,7 +1173,11 @@ export default function ProfilePage() {
                                   )
                                 }
                               />
-                              {file ? "Replace selection" : savedPhoto ? "Replace photo" : "Choose photo"}
+                              {file
+                                ? "Replace selection"
+                                : savedPhoto
+                                  ? "Replace photo"
+                                  : "Choose photo"}
                             </label>
                             {file && (
                               <div className={styles.samplePhotoSelection}>
@@ -1049,7 +1190,8 @@ export default function ProfilePage() {
                                   disabled={isSavingSamples}
                                   onClick={() => {
                                     updateSampleFile(index, null);
-                                    const input = sampleFileInputRefs.current[index];
+                                    const input =
+                                      sampleFileInputRefs.current[index];
                                     if (input) input.value = "";
                                   }}
                                 >
@@ -1086,7 +1228,9 @@ export default function ProfilePage() {
                       disabled={galleryLoading || isSavingSamples}
                       onClick={saveSamplePhotos}
                     >
-                      {isSavingSamples ? "Saving photos..." : "Save sample photos"}
+                      {isSavingSamples
+                        ? "Saving photos..."
+                        : "Save sample photos"}
                     </button>
                   </div>
                 </section>
@@ -1094,7 +1238,9 @@ export default function ProfilePage() {
 
               {saveMessage && (
                 <p
-                  className={saveMessageIsError ? styles.editError : styles.editNotice}
+                  className={
+                    saveMessageIsError ? styles.editError : styles.editNotice
+                  }
                   role={saveMessageIsError ? "alert" : "status"}
                 >
                   {saveMessage}
@@ -1114,7 +1260,11 @@ export default function ProfilePage() {
 
           {profile && !isEditing && (
             <>
-              {saveMessage && <p className={styles.editNotice} role="status">{saveMessage}</p>}
+              {saveMessage && (
+                <p className={styles.editNotice} role="status">
+                  {saveMessage}
+                </p>
+              )}
               <section className={styles.identity}>
                 <Image
                   className={styles.avatar}
@@ -1133,181 +1283,208 @@ export default function ProfilePage() {
                   }}
                 />
                 <div className={styles.identityCopy}>
-                  <h2>{profile.name || "PhotoConnect user"}</h2>
+                  <h2>{profile.name || "BookMyPhotographer user"}</h2>
                   <p>{profile.type || "Member"}</p>
                   <span>{profile.email}</span>
                 </div>
-                <span className={styles.status}>{profile.status || "Account"}</span>
+                <span className={styles.status}>
+                  {profile.status || "Account"}
+                </span>
               </section>
 
               <div className={styles.profileDetailsLayout}>
-              <section className={styles.availabilitySection}>
-                <header className={styles.availabilityHeader}>
-                  <div>
-                    <h2>Booking availability</h2>
-                    <p>Choose the dates you are unavailable for bookings.</p>
-                  </div>
-                  {isEditingAvailability ? (
-                    <div className={styles.availabilityActions}>
-                      <button
-                        className={styles.availabilitySecondaryButton}
-                        type="button"
-                        disabled={isSavingAvailability}
-                        onClick={cancelAvailabilityEdit}
-                      >
-                        Cancel
-                      </button>
+                <section className={styles.availabilitySection}>
+                  <header className={styles.availabilityHeader}>
+                    <div>
+                      <h2>Booking availability</h2>
+                      <p>Choose the dates you are unavailable for bookings.</p>
+                    </div>
+                    {isEditingAvailability ? (
+                      <div className={styles.availabilityActions}>
+                        <button
+                          className={styles.availabilitySecondaryButton}
+                          type="button"
+                          disabled={isSavingAvailability}
+                          onClick={cancelAvailabilityEdit}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          className={styles.availabilitySaveButton}
+                          type="button"
+                          disabled={isSavingAvailability}
+                          onClick={saveAvailability}
+                        >
+                          {isSavingAvailability ? "Saving..." : "Save dates"}
+                        </button>
+                      </div>
+                    ) : (
                       <button
                         className={styles.availabilitySaveButton}
                         type="button"
-                        disabled={isSavingAvailability}
-                        onClick={saveAvailability}
+                        onClick={startAvailabilityEdit}
                       >
-                        {isSavingAvailability ? "Saving..." : "Save dates"}
+                        Edit availability
+                      </button>
+                    )}
+                  </header>
+
+                  <div
+                    className={styles.availabilityLegend}
+                    aria-label="Date status"
+                  >
+                    <span>
+                      <i
+                        className={styles.availableSwatch}
+                        aria-hidden="true"
+                      />
+                      Available
+                    </span>
+                    <span>
+                      <i className={styles.occupiedSwatch} aria-hidden="true" />
+                      Occupied
+                    </span>
+                    {isEditingAvailability && (
+                      <span className={styles.editingHint}>
+                        Select dates to toggle
+                      </span>
+                    )}
+                  </div>
+
+                  <div className={styles.availabilityCalendar}>
+                    <div className={styles.availabilityMonthHeader}>
+                      <button
+                        className={styles.calendarArrow}
+                        type="button"
+                        aria-label="Previous month"
+                        onClick={() =>
+                          setAvailabilityMonth(
+                            new Date(
+                              availabilityYear,
+                              availabilityMonthIndex - 1,
+                              1,
+                            ),
+                          )
+                        }
+                      >
+                        ‹
+                      </button>
+                      <h3>
+                        {availabilityMonth.toLocaleDateString(undefined, {
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </h3>
+                      <button
+                        className={styles.calendarArrow}
+                        type="button"
+                        aria-label="Next month"
+                        onClick={() =>
+                          setAvailabilityMonth(
+                            new Date(
+                              availabilityYear,
+                              availabilityMonthIndex + 1,
+                              1,
+                            ),
+                          )
+                        }
+                      >
+                        ›
                       </button>
                     </div>
-                  ) : (
-                    <button
-                      className={styles.availabilitySaveButton}
-                      type="button"
-                      onClick={startAvailabilityEdit}
-                    >
-                      Edit availability
-                    </button>
-                  )}
-                </header>
 
-                <div className={styles.availabilityLegend} aria-label="Date status">
-                  <span>
-                    <i className={styles.availableSwatch} aria-hidden="true" />
-                    Available
-                  </span>
-                  <span>
-                    <i className={styles.occupiedSwatch} aria-hidden="true" />
-                    Occupied
-                  </span>
-                  {isEditingAvailability && (
-                    <span className={styles.editingHint}>Select dates to toggle</span>
-                  )}
-                </div>
-
-                <div className={styles.availabilityCalendar}>
-                  <div className={styles.availabilityMonthHeader}>
-                    <button
-                      className={styles.calendarArrow}
-                      type="button"
-                      aria-label="Previous month"
-                      onClick={() =>
-                        setAvailabilityMonth(
+                    <div className={styles.availabilityGrid}>
+                      {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
+                        (weekday) => (
+                          <span
+                            className={styles.availabilityWeekday}
+                            key={weekday}
+                          >
+                            {weekday}
+                          </span>
+                        ),
+                      )}
+                      {availabilityDays.map((day, index) => {
+                        if (day === null) {
+                          return <span key={`empty-${index}`} />;
+                        }
+                        const dateKey = toDateValue(
                           new Date(
                             availabilityYear,
-                            availabilityMonthIndex - 1,
-                            1,
+                            availabilityMonthIndex,
+                            day,
                           ),
-                        )
-                      }
-                    >
-                      ‹
-                    </button>
-                    <h3>
-                      {availabilityMonth.toLocaleDateString(undefined, {
-                        month: "long",
-                        year: "numeric",
+                        );
+                        const isOccupied = activeOccupiedDates.has(dateKey);
+                        const isPast = dateKey < todayValue;
+                        return (
+                          <button
+                            className={`${styles.availabilityDay} ${isPast ? styles.pastDay : isOccupied ? styles.occupiedDay : styles.availableDay}`}
+                            key={dateKey}
+                            type="button"
+                            aria-label={`${displayDate(dateKey)}: ${isOccupied ? "occupied" : "available"}`}
+                            aria-pressed={isOccupied}
+                            disabled={
+                              !isEditingAvailability ||
+                              isSavingAvailability ||
+                              isPast
+                            }
+                            onClick={() =>
+                              setAvailabilityDraft((dates) =>
+                                isOccupied
+                                  ? dates.filter((date) => date !== dateKey)
+                                  : [...dates, dateKey],
+                              )
+                            }
+                          >
+                            {day}
+                          </button>
+                        );
                       })}
-                    </h3>
-                    <button
-                      className={styles.calendarArrow}
-                      type="button"
-                      aria-label="Next month"
-                      onClick={() =>
-                        setAvailabilityMonth(
-                          new Date(
-                            availabilityYear,
-                            availabilityMonthIndex + 1,
-                            1,
-                          ),
-                        )
+                    </div>
+                  </div>
+
+                  {availabilityMessage && (
+                    <p
+                      className={
+                        availabilityMessageIsError
+                          ? styles.editError
+                          : styles.editNotice
                       }
+                      role={availabilityMessageIsError ? "alert" : "status"}
                     >
-                      ›
-                    </button>
+                      {availabilityMessage}
+                    </p>
+                  )}
+                </section>
+
+                <section className={styles.accountDetails}>
+                  <div className={styles.sectionHeading}>
+                    <h2>Account details</h2>
                   </div>
-
-                  <div className={styles.availabilityGrid}>
-                    {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(
-                      (weekday) => (
-                        <span
-                          className={styles.availabilityWeekday}
-                          key={weekday}
-                        >
-                          {weekday}
-                        </span>
-                      ),
-                    )}
-                    {availabilityDays.map((day, index) => {
-                      if (day === null) {
-                        return <span key={`empty-${index}`} />;
-                      }
-                      const dateKey = toDateValue(
-                        new Date(availabilityYear, availabilityMonthIndex, day),
-                      );
-                      const isOccupied = activeOccupiedDates.has(dateKey);
-                      const isPast = dateKey < todayValue;
-                      return (
-                        <button
-                          className={`${styles.availabilityDay} ${isPast ? styles.pastDay : isOccupied ? styles.occupiedDay : styles.availableDay}`}
-                          key={dateKey}
-                          type="button"
-                          aria-label={`${displayDate(dateKey)}: ${isOccupied ? "occupied" : "available"}`}
-                          aria-pressed={isOccupied}
-                          disabled={!isEditingAvailability || isSavingAvailability || isPast}
-                          onClick={() =>
-                            setAvailabilityDraft((dates) =>
-                              isOccupied
-                                ? dates.filter((date) => date !== dateKey)
-                                : [...dates, dateKey],
-                            )
-                          }
-                        >
-                          {day}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {availabilityMessage && (
-                  <p
-                    className={
-                      availabilityMessageIsError
-                        ? styles.editError
-                        : styles.editNotice
-                    }
-                    role={availabilityMessageIsError ? "alert" : "status"}
-                  >
-                    {availabilityMessage}
-                  </p>
-                )}
-              </section>
-
-              <section className={styles.accountDetails}>
-                <div className={styles.sectionHeading}>
-                  <h2>Account details</h2>
-                </div>
-                {profileSections.map((section) => (
-                  <section className={styles.detailSection} key={section.title}>
-                    <h3>{section.title}</h3>
-                    <dl className={styles.detailsGrid}>
-                      {section.fields.map(([field, label]) => (
-                        <div className={styles.detailItem} key={field}>
-                          <dt>{label}</dt>
-                          <dd>{formatValue(field, profile[field])}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </section>
-                ))}
-              </section>
+                  {profileSections.map((section) => (
+                    <section
+                      className={styles.detailSection}
+                      key={section.title}
+                    >
+                      <h3>{section.title}</h3>
+                      <dl className={styles.detailsGrid}>
+                        {section.fields.map(([field, label]) => (
+                          <div className={styles.detailItem} key={field}>
+                            <dt>{label}</dt>
+                            <dd>
+                              {field === "specialties" ? (
+                                <SpecialtyTags value={profile[field]} />
+                              ) : (
+                                formatValue(field, profile[field])
+                              )}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </section>
+                  ))}
+                </section>
               </div>
             </>
           )}

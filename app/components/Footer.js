@@ -10,13 +10,13 @@ export default function Footer() {
       <div>
         <Link href="/" className={styles.logo}>
           <Image
-            src={`${basePath}/photoconnect-logo.svg`}
-            alt="PhotoConnect logo"
+            src={`${basePath}/bookmyphotographer-logo.svg`}
+            alt="BookMyPhotographer logo"
             width="31"
             height="24"
           />
           <span>
-            <b>PhotoConnect</b>
+            <b>BookMyPhotographer</b>
             <small>Capture People. Create Moments.</small>
           </span>
         </Link>
@@ -52,9 +52,9 @@ export default function Footer() {
       </div>
       <div>
         <h4>Contact</h4>
-        <a className={styles.contactItem} href="mailto:support@photoconnect.com">
+        <a className={styles.contactItem} href="mailto:support@bookmyphotographer.com">
           <span aria-hidden="true">✉</span>
-          <span>support@photoconnect.com</span>
+          <span>support@bookmyphotographer.com</span>
         </a>
         <a className={styles.contactItem} href="tel:+919876543210">
           <span aria-hidden="true">☎</span>
@@ -71,7 +71,7 @@ export default function Footer() {
         </a>
       </div>
       <small className={styles.copyright}>
-        © {new Date().getFullYear()} PhotoConnect. All rights reserved.
+        © {new Date().getFullYear()} BookMyPhotographer. All rights reserved.
       </small>
     </footer>
   );

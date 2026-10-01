@@ -7,14 +7,6 @@ import Navbar from "./components/Navbar";
 import PhotographerCard from "./components/PhotographerCard";
 import Footer from "./components/Footer";
 
-const partners = [
-  ["✿", "Dream Events", "Turning Moments into Memories"],
-  ["ℂ", "Celebrations Co.", "Events & Beyond"],
-  ["✾", "Elite Weddings", "Your Dream, Our Plan"],
-  ["$", "Corporate Connect", "Events | Branding | Experiences"],
-  ["#", "Corpo Connect", "Eventyrujts | Brandidyjng | Experidgjences"],
-];
-
 const calendarDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const savedUserKey = "photoConnectUser";
 const defaultProfileImage = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/defolt_profile_pic.jpg`;
@@ -62,6 +54,9 @@ function getCalendarCells(monthDate) {
 
 export default function Home() {
   const [slide, setSlide] = useState(0);
+  const [partners, setPartners] = useState([]);
+  const [partnersLoading, setPartnersLoading] = useState(true);
+  const [partnersError, setPartnersError] = useState("");
   const [photographers, setPhotographers] = useState([]);
   const [photographersLoading, setPhotographersLoading] = useState(true);
   const [photographersError, setPhotographersError] = useState("");
@@ -77,6 +72,45 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const swipeStartX = useRef(null);
   const profileSwipeStartY = useRef(null);
+
+  useEffect(() => {
+    let isCurrent = true;
+    fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/partner-companies?status=Published`,
+    )
+      .then(async (response) => {
+        const result = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(result?.message || "Could not load partner companies.");
+        }
+        return result;
+      })
+      .then((result) => {
+        if (!isCurrent) return;
+        const publishedPartners = Array.isArray(result?.data)
+          ? result.data.filter((partner) => partner.status === "Published")
+          : [];
+        setPartners(
+          publishedPartners.map((partner) => ({
+            ...partner,
+            id: String(partner._id ?? partner.id),
+          })),
+        );
+      })
+      .catch((error) => {
+        if (isCurrent) {
+          setPartnersError(error.message || "Could not load partner companies.");
+        }
+      })
+      .finally(() => {
+        if (isCurrent) setPartnersLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, []);
+
   const heroImages = [
     "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1800&q=85",
     "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=1800&q=85",
@@ -378,34 +412,78 @@ export default function Home() {
       <section className={styles.partners}>
         <h2>Our Partner Companies</h2>
         <p>Proud to work with amazing organizations</p>
-        <div
-          className={`${styles.partnerGrid} ${
-            partners.length > 4 ? styles.hasMarquee : ""
-          }`}
-        >
-          <div className={styles.partnerTrack}>
-            {[false, true].map((isDuplicate) => (
-              <div
-                className={styles.partnerSet}
-                aria-hidden={isDuplicate}
-                key={isDuplicate ? "duplicate" : "original"}
-              >
-                {partners.map(([icon, name, description]) => (
-                  <article key={`${name}-${isDuplicate ? "duplicate" : "original"}`}>
-                    <strong>{icon}</strong>
-                    <h3>{name}</h3>
-                    <small>{description}</small>
-                    <div>
-                      <span>in</span>
-                      <span>◎</span>
-                      <span>♥</span>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ))}
+        {partnersLoading ? (
+          <p className={styles.partnerState} role="status">
+            Loading partner companies...
+          </p>
+        ) : partnersError ? (
+          <p className={styles.partnerState} role="alert">
+            {partnersError}
+          </p>
+        ) : partners.length === 0 ? (
+          <p className={styles.partnerState}>
+            No partner companies are available yet.
+          </p>
+        ) : (
+          <div
+            className={`${styles.partnerGrid} ${
+              partners.length > 4 ? styles.hasMarquee : ""
+            }`}
+          >
+            <div className={styles.partnerTrack}>
+              {[false, true].map((isDuplicate) => (
+                <div
+                  className={styles.partnerSet}
+                  aria-hidden={isDuplicate}
+                  key={isDuplicate ? "duplicate" : "original"}
+                >
+                  {partners.map((partner) => (
+                    <article key={`${partner.id}-${isDuplicate ? "duplicate" : "original"}`}>
+                      <strong>{partner.icon}</strong>
+                      <h3>{partner.name}</h3>
+                      <small>{partner.description}</small>
+                      <div aria-label={`${partner.name} social profiles`}>
+                        {partner.facebookUrl && (
+                          <a
+                            className={styles.partnerFacebook}
+                            href={partner.facebookUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label={`${partner.name} on Facebook`}
+                          >
+                            f
+                          </a>
+                        )}
+                        {partner.instagramUrl && (
+                          <a
+                            className={styles.partnerInstagram}
+                            href={partner.instagramUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label={`${partner.name} on Instagram`}
+                          >
+                            ◎
+                          </a>
+                        )}
+                        {partner.linkedinUrl && (
+                          <a
+                            className={styles.partnerLinkedin}
+                            href={partner.linkedinUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label={`${partner.name} on LinkedIn`}
+                          >
+                            in
+                          </a>
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </section>
       <Footer />
       {selectedPhotographer && (
@@ -497,12 +575,6 @@ export default function Home() {
                   <p>{selectedPhotographer.proffession || "Photographer"}</p>
                 </div>
                 <span className={styles.approved}>✓ Approved</span>
-                <button
-                  className={styles.profileHeart}
-                  aria-label="Save profile"
-                >
-                  ♡
-                </button>
               </div>
               <p className={styles.profileLocation}>
                 ● {selectedPhotographer.location}

@@ -67,12 +67,12 @@ export default function ContactPage() {
             </a>
             <a
               className={styles.contactDetail}
-              href="mailto:support@photoconnect.com"
+              href="mailto:support@bookmyphotographer.com"
             >
               <i>✉</i>
               <div>
                 <b>Email</b>
-                <p>support@photoconnect.com</p>
+                <p>support@bookmyphotographer.com</p>
               </div>
             </a>
             <a className={styles.contactDetail} href="tel:+919876543210">

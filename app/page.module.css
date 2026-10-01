@@ -29,32 +29,6 @@
   font-size: 18px;
   display: block;
 }
-.logo small {
-  font-size: 8px;
-  display: block;
-  margin-top: 2px;
-  color: #dbe3e5;
-  white-space: nowrap;
-}
-.header nav {
-  display: flex;
-  align-self: stretch;
-  align-items: center;
-  gap: 32px;
-  margin-left: auto;
-}
-.header nav a {
-  font-size: 13px;
-  color: #fff;
-  padding: 7px 0;
-  transition: color 160ms ease, border-color 160ms ease;
-}
-.header nav a:hover {
-  color: #8dc5ff;
-}
-.header nav .current {
-  border-bottom: 2px solid #fff;
-}
 .menuToggle {
   display: none;
 }
@@ -422,6 +396,15 @@
   background: #fff;
   padding: 46px max(5.4%, calc((100% - 1240px) / 2)) 42px;
 }
+.partnerState {
+  margin: 20px 0 0;
+  padding: 28px 16px;
+  border: 1px solid #e1e8ed;
+  border-radius: 4px;
+  color: #607686;
+  font-size: 12px;
+  text-align: center;
+}
 .partnerGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -497,13 +480,25 @@
   gap: 15px;
   margin-top: 19px;
 }
-.partnerGrid article > div span {
-  font-size: 15px;
-  color: #0871b8;
-  font-weight: bold;
+.partnerGrid article > div:empty {
+  display: none;
 }
-.partnerGrid article > div span:nth-child(2) {
-  color: #e84164;
+.partnerGrid article > div a {
+  font-size: 15px;
+  font-weight: bold;
+  text-decoration: none;
+}
+.partnerGrid article > div a:hover {
+  text-decoration: underline;
+}
+.partnerFacebook {
+  color: #2763a5;
+}
+.partnerInstagram {
+  color: #b54277;
+}
+.partnerLinkedin {
+  color: #176b91;
 }
 .footer {
   position: relative;
@@ -692,7 +687,6 @@
   align-items: flex-start;
   gap: 10px;
   flex-wrap: wrap;
-  padding-right: 30px;
 }
 .profileHeading > div {
   min-width: 0;
@@ -715,14 +709,6 @@
   color: #269b63;
   font-size: 9px;
   font-weight: bold;
-}
-.profileHeart {
-  margin-left: auto;
-  border: 0;
-  background: transparent;
-  color: #718597;
-  font-size: 25px;
-  cursor: pointer;
 }
 .profileLocation {
   margin: 10px 0;

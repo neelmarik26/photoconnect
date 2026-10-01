@@ -46,6 +46,8 @@ export default function AdminSecurityPage() {
           name: user.name,
           profileImageUrl: user.profileImageUrl,
           type: user.type,
+          accessToken: user.accessToken,
+          accountCollection: user.accountCollection,
           expiresAt: Date.now() + 10 * 24 * 60 * 60 * 1000,
         }),
       );

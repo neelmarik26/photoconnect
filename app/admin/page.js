@@ -45,18 +45,8 @@ function mapPhotographer(user) {
   };
 }
 
-const navigation = [
-  ["dashboard", "Dashboard", "⌂"],
-  ["approvals", "Photographer Approvals", "▦"],
-  ["manage", "Manage Photographers", "♟"],
-  ["partners", "Partner Companies", "▣"],
-  ["gallery", "Gallery / Banner", "▤"],
-  ["settings", "Settings", "⚙"],
-];
-
 export default function AdminPage() {
   const router = useRouter();
-  const [hasAdminAccess, setHasAdminAccess] = useState(false);
   const [activeNav, setActiveNav] = useState("approvals");
   const [activeTab, setActiveTab] = useState("Pending");
   const [photographers, setPhotographers] = useState([]);
@@ -65,58 +55,39 @@ export default function AdminPage() {
   const [statusError, setStatusError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [savingPhotographerId, setSavingPhotographerId] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   useEffect(() => {
     let isCurrent = true;
-    const savedUser = window.localStorage.getItem("photoConnectUser");
-    if (savedUser) {
-      try {
-        const user = JSON.parse(savedUser);
-        if (
-          user.userId &&
-          user.expiresAt > Date.now() &&
-          ["ADMIN", "SUPERADMIN"].includes(user.type)
-        ) {
-          startTransition(() => setHasAdminAccess(true));
-          fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users?type=PHOTOGRAPHER&page=1&limit=100&sortBy=createdAt&sortOrder=desc`,
-          )
-            .then(async (response) => {
-              const result = await response.json().catch(() => null);
-              if (!response.ok) {
-                throw new Error(
-                  result?.message || "Could not load photographer records.",
-                );
-              }
-              return result;
-            })
-            .then((result) => {
-              if (isCurrent) {
-                const users = Array.isArray(result?.data) ? result.data : [];
-                setPhotographers(users.map(mapPhotographer));
-              }
-            })
-            .catch((error) => {
-              if (isCurrent) {
-                setPhotographersError(
-                  error.message || "Could not load photographer records.",
-                );
-              }
-            })
-            .finally(() => {
-              if (isCurrent) setIsLoadingPhotographers(false);
-            });
-          return () => {
-            isCurrent = false;
-          };
+    fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users?type=PHOTOGRAPHER&page=1&limit=100&sortBy=createdAt&sortOrder=desc`,
+    )
+      .then(async (response) => {
+        const result = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(
+            result?.message || "Could not load photographer records.",
+          );
         }
-      } catch {
-        window.localStorage.removeItem("photoConnectUser");
-      }
-    }
-    router.replace("/admin/security");
+        return result;
+      })
+      .then((result) => {
+        if (isCurrent) {
+          const users = Array.isArray(result?.data) ? result.data : [];
+          setPhotographers(users.map(mapPhotographer));
+        }
+      })
+      .catch((error) => {
+        if (isCurrent) {
+          setPhotographersError(
+            error.message || "Could not load photographer records.",
+          );
+        }
+      })
+      .finally(() => {
+        if (isCurrent) setIsLoadingPhotographers(false);
+      });
+
     return () => {
       isCurrent = false;
     };
@@ -190,25 +161,35 @@ export default function AdminPage() {
         <div className={styles.brand}>
           <span className={styles.brandMark}>▣</span>
           <span>
-            PhotoConnect <b>|</b> <em>Admin</em>
+            BookMyPhotographer <b>|</b> <em>Admin</em>
           </span>
         </div>
         <nav className={styles.navigation} aria-label="Admin navigation">
-          {navigation.map(([key, label, icon]) => (
+          {navigation
+            .filter(([key]) => key !== "admins" || isSuperAdmin)
+            .map(([key, label, icon]) => (
             <button
               className={
                 activeNav === key ? styles.navItemActive : styles.navItem
               }
               key={key}
               onClick={() => {
-                setActiveNav(key);
                 setSidebarOpen(false);
+                if (key === "partners") {
+                  router.push("/admin/partner_companis");
+                  return;
+                }
+                if (key === "admins") {
+                  router.push("/admin/admins");
+                  return;
+                }
+                setActiveNav(key);
               }}
             >
               <span className={styles.navIcon}>{icon}</span>
               {label}
             </button>
-          ))}
+            ))}
           <button
             className={styles.navItem}
             onClick={() => router.replace("/admin/security")}
@@ -217,7 +198,7 @@ export default function AdminPage() {
             Logout
           </button>
         </nav>
-        <div className={styles.sidebarFooter}>PhotoConnect Admin v1.0</div>
+        <div className={styles.sidebarFooter}>BookMyPhotographer Admin v1.0</div>
       </aside>
 
       {sidebarOpen && (
@@ -259,7 +240,15 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
-            <button className={styles.profileButton}>
+            <button
+              className={styles.profileButton}
+              type="button"
+              onClick={() => {
+                if (canEditAdminProfile) router.push("/admin/profile");
+              }}
+              disabled={!canEditAdminProfile}
+              aria-label={canEditAdminProfile ? "Edit admin profile" : "Admin account"}
+            >
               <span className={styles.avatar}>A</span>
               <span>Admin</span>
               <small>⌄</small>

@@ -81,13 +81,13 @@ export default function Navbar({ current = "home", hideAuthActions = false }) {
     <header className={styles.header}>
       <Link href="/" className={styles.logo}>
         <Image
-          src={`${basePath}/photoconnect-logo.svg`}
-          alt="PhotoConnect logo"
+          src={`${basePath}/bookmyphotographer-logo.svg`}
+          alt="BookMyPhotographer logo"
           width="31"
           height="24"
         />
         <span>
-          <b>PhotoConnect</b>
+          <b>BookMyPhotographer</b>
           <small>Capture People. Create Moments.</small>
         </span>
       </Link>

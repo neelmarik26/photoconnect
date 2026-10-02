@@ -1,9 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { startTransition, useState } from "react";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 
 const statusLabels = {
@@ -46,8 +44,6 @@ function mapPhotographer(user) {
 }
 
 export default function AdminPage() {
-  const router = useRouter();
-  const [activeNav, setActiveNav] = useState("approvals");
   const [activeTab, setActiveTab] = useState("Pending");
   const [photographers, setPhotographers] = useState([]);
   const [isLoadingPhotographers, setIsLoadingPhotographers] = useState(true);
@@ -55,7 +51,6 @@ export default function AdminPage() {
   const [statusError, setStatusError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [savingPhotographerId, setSavingPhotographerId] = useState("");
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   useEffect(() => {
     let isCurrent = true;
@@ -91,7 +86,7 @@ export default function AdminPage() {
     return () => {
       isCurrent = false;
     };
-  }, [router]);
+  }, []);
 
   const filteredPhotographers = photographers.filter((photographer) => {
     const matchesTab = photographer.status === activeTab;
@@ -151,112 +146,10 @@ export default function AdminPage() {
     ? Math.round((approvedCount / photographers.length) * 100)
     : 0;
 
-  if (!hasAdminAccess) return null;
+  // if (!hasAdminAccess) return null;
 
   return (
-    <main className={styles.admin}>
-      <aside
-        className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}
-      >
-        <div className={styles.brand}>
-          <span className={styles.brandMark}>▣</span>
-          <span>
-            BookMyPhotographer <b>|</b> <em>Admin</em>
-          </span>
-        </div>
-        <nav className={styles.navigation} aria-label="Admin navigation">
-          {navigation
-            .filter(([key]) => key !== "admins" || isSuperAdmin)
-            .map(([key, label, icon]) => (
-            <button
-              className={
-                activeNav === key ? styles.navItemActive : styles.navItem
-              }
-              key={key}
-              onClick={() => {
-                setSidebarOpen(false);
-                if (key === "partners") {
-                  router.push("/admin/partner_companis");
-                  return;
-                }
-                if (key === "admins") {
-                  router.push("/admin/admins");
-                  return;
-                }
-                setActiveNav(key);
-              }}
-            >
-              <span className={styles.navIcon}>{icon}</span>
-              {label}
-            </button>
-            ))}
-          <button
-            className={styles.navItem}
-            onClick={() => router.replace("/admin/security")}
-          >
-            <span className={styles.navIcon}>⇥</span>
-            Logout
-          </button>
-        </nav>
-        <div className={styles.sidebarFooter}>BookMyPhotographer Admin v1.0</div>
-      </aside>
-
-      {sidebarOpen && (
-        <button
-          className={styles.sidebarBackdrop}
-          aria-label="Close navigation"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      <section className={styles.workspace}>
-        <header className={styles.topbar}>
-          <button
-            className={styles.menuButton}
-            aria-label="Open navigation"
-            onClick={() => setSidebarOpen(true)}
-          >
-            ☰
-          </button>
-          <div className={styles.breadcrumb}>
-            Admin <span>/</span>{" "}
-            {activeNav === "approvals" ? "Photographer Approvals" : "Dashboard"}
-          </div>
-          <div className={styles.topbarActions}>
-            <div className={styles.notificationWrap}>
-              <button
-                className={styles.iconButton}
-                aria-label="Notifications"
-                onClick={() => setNotificationsOpen((open) => !open)}
-              >
-                ♧<i />
-              </button>
-              {notificationsOpen && (
-                <div className={styles.notificationPanel}>
-                  <b>Notifications</b>
-                  <p>
-                    {pendingCount} photographer {pendingCount === 1 ? "application needs" : "applications need"} review.
-                  </p>
-                </div>
-              )}
-            </div>
-            <button
-              className={styles.profileButton}
-              type="button"
-              onClick={() => {
-                if (canEditAdminProfile) router.push("/admin/profile");
-              }}
-              disabled={!canEditAdminProfile}
-              aria-label={canEditAdminProfile ? "Edit admin profile" : "Admin account"}
-            >
-              <span className={styles.avatar}>A</span>
-              <span>Admin</span>
-              <small>⌄</small>
-            </button>
-          </div>
-        </header>
-
-        <div className={styles.content}>
+    <div>
           <div className={styles.pageIntro}>
             <div>
               <p className={styles.eyebrow}>WORKSPACE / MODERATION</p>
@@ -473,8 +366,6 @@ export default function AdminPage() {
             Showing {filteredPhotographers.length} of {photographers.length}{" "}
             photographers <span>Live records</span>
           </p>
-        </div>
-      </section>
-    </main>
+    </div>
   );
 }

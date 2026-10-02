@@ -2,7 +2,7 @@
 
 import { startTransition, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import styles from "./page.module.css";
 
 const savedUserKey = "photoConnectUser";
@@ -17,17 +17,25 @@ const navigation = [
 
 export default function AdminLayout({ children }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [hasAdminAccess, setHasAdminAccess] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [canEditAdminProfile, setCanEditAdminProfile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const normalizedPathname = pathname.replace(/\/+$/, "") || "/";
+  const isSecurityPage = normalizedPathname === "/admin/security";
 
   useEffect(() => {
-    let isCurrent = true;
     const savedUser = window.localStorage.getItem(savedUserKey);
+
     if (savedUser) {
       try {
         const user = JSON.parse(savedUser);
+        // Redirect PHOTOGRAPHER users to home page
+        if (user.type === "PHOTOGRAPHER") {
+          router.replace("/");
+          return;
+        }
         if (
           user.userId &&
           user.expiresAt > Date.now() &&
@@ -46,20 +54,23 @@ export default function AdminLayout({ children }) {
         window.localStorage.removeItem(savedUserKey);
       }
     }
-    if (!hasAdminAccess) {
+    // Only redirect to security page if not already on it and no admin access
+    if (!hasAdminAccess && !isSecurityPage) {
       router.replace("/admin/security");
     }
-    return () => {
-      isCurrent = false;
-    };
-  }, [router]);
+  }, [router, hasAdminAccess, isSecurityPage]);
 
   function logout() {
     window.localStorage.removeItem(savedUserKey);
     router.replace("/admin/security");
   }
 
-  if (!hasAdminAccess) return null;
+  if (!hasAdminAccess && !isSecurityPage) return null;
+
+  // On security page, render children without admin layout
+  if (isSecurityPage) {
+    return <div className={styles.securityPage}>{children}</div>;
+  }
 
   return (
     <main className={styles.admin}>

@@ -1,20 +1,11 @@
 "use client";
 
 import { startTransition, useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import adminStyles from "../page.module.css";
 import styles from "./page.module.css";
 
 const savedUserKey = "photoConnectUser";
-const navigation = [
-	["dashboard", "Dashboard", "⌂"],
-	["approvals", "Photographer Approvals", "▦"],
-	["manage", "Manage Photographers", "♟"],
-	["partners", "Partner Companies", "▣"],
-	["gallery", "Gallery / Banner", "▤"],
-	["admins", "Manage Admins", "♙"],
-];
 
 async function requestPartnerApi(path = "", options = {}) {
 	const response = await fetch(
@@ -40,14 +31,12 @@ function mapPartnerCompany(partner) {
 export default function PartnerCompaniesPage() {
 	const router = useRouter();
 	const [hasAdminAccess, setHasAdminAccess] = useState(false);
-	const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 	const [partners, setPartners] = useState([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSaving, setIsSaving] = useState(false);
 	const [deletingPartnerId, setDeletingPartnerId] = useState("");
 	const [searchTerm, setSearchTerm] = useState("");
 	const [statusFilter, setStatusFilter] = useState("All statuses");
-	const [sidebarOpen, setSidebarOpen] = useState(false);
 	const [isFormOpen, setIsFormOpen] = useState(false);
 	const [editingPartner, setEditingPartner] = useState(null);
 	const [message, setMessage] = useState("");
@@ -85,11 +74,6 @@ export default function PartnerCompaniesPage() {
 		}
 
 		startTransition(() => setHasAdminAccess(true));
-		startTransition(() =>
-			setIsSuperAdmin(
-				user.type === "SUPERADMIN" && user.accountCollection === "admins",
-			),
-		);
 		requestPartnerApi()
 			.then((result) => {
 				if (isCurrent) {
@@ -203,92 +187,11 @@ export default function PartnerCompaniesPage() {
 		}
 	}
 
-	function logout() {
-		window.localStorage.removeItem(savedUserKey);
-		router.replace("/admin/security");
-	}
-
 	if (!hasAdminAccess) return null;
 
 	return (
-		<main className={adminStyles.admin}>
-			<aside
-				className={`${adminStyles.sidebar} ${sidebarOpen ? adminStyles.sidebarOpen : ""}`}
-			>
-				<div className={adminStyles.brand}>
-					<span className={adminStyles.brandMark}>▣</span>
-					<span>
-						BookMyPhotographer <b>|</b> <em>Admin</em>
-					</span>
-				</div>
-				<nav className={adminStyles.navigation} aria-label="Admin navigation">
-					{navigation
-						.filter(([key]) => key !== "admins" || isSuperAdmin)
-						.map(([key, label, icon]) => (
-						<button
-							className={
-								key === "partners"
-									? adminStyles.navItemActive
-									: adminStyles.navItem
-							}
-							key={key}
-							type="button"
-							aria-current={key === "partners" ? "page" : undefined}
-							onClick={() => {
-								setSidebarOpen(false);
-								if (key === "admins") {
-									router.push("/admin/admins");
-									return;
-								}
-								if (key !== "partners") router.push("/admin");
-							}}
-						>
-							<span className={adminStyles.navIcon}>{icon}</span>
-							{label}
-						</button>
-						))}
-					<button
-						className={adminStyles.navItem}
-						type="button"
-						onClick={logout}
-					>
-						<span className={adminStyles.navIcon}>⇥</span>
-						Logout
-					</button>
-				</nav>
-				<div className={adminStyles.sidebarFooter}>
-					BookMyPhotographer Admin v1.0
-				</div>
-			</aside>
-
-			{sidebarOpen && (
-				<button
-					className={adminStyles.sidebarBackdrop}
-					type="button"
-					aria-label="Close navigation"
-					onClick={() => setSidebarOpen(false)}
-				/>
-			)}
-
-			<section className={adminStyles.workspace}>
-				<header className={adminStyles.topbar}>
-					<button
-						className={adminStyles.menuButton}
-						type="button"
-						aria-label="Open navigation"
-						onClick={() => setSidebarOpen(true)}
-					>
-						☰
-					</button>
-					<div className={adminStyles.breadcrumb}>
-						Admin <span>/</span> Partner Companies
-					</div>
-					<Link className={styles.backLink} href="/admin">
-						Photographer approvals
-					</Link>
-				</header>
-
-				<div className={adminStyles.content}>
+		<>
+			<div>
 					<div className={adminStyles.pageIntro}>
 						<div>
 							<p className={adminStyles.eyebrow}>WORKSPACE / DIRECTORY</p>
@@ -476,8 +379,7 @@ export default function PartnerCompaniesPage() {
 					<p className={adminStyles.footerNote}>
 							Partner companies are managed through the connected backend.
 					</p>
-				</div>
-			</section>
+			</div>
 
 			{isFormOpen && (
 				<div
@@ -601,6 +503,6 @@ export default function PartnerCompaniesPage() {
 					</section>
 				</div>
 			)}
-		</main>
+		</>
 	);
 }

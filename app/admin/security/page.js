@@ -11,6 +11,7 @@ export default function AdminSecurityPage() {
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function submitCredentials(event) {
     event.preventDefault();
@@ -61,7 +62,7 @@ export default function AdminSecurityPage() {
 
   return (
     <main className={styles.page}>
-      <Navbar current="signin" hideAuthActions />
+      <Navbar current="signin" hideAuthActions fullWidth />
       <section className={styles.content}>
         <div className={styles.card}>
           <div className={styles.heading}>
@@ -81,14 +82,24 @@ export default function AdminSecurityPage() {
             </label>
             <label className={styles.field}>
               Password
-              <input
-                required
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                placeholder="Enter your password"
-              />
-            </label>
+                          <div className={styles.passwordWrapper}>
+                            <input
+                              required
+                              name="password"
+                              type={showPassword ? "text" : "password"}
+                              autoComplete="current-password"
+                              placeholder="Enter your password"
+                            />
+                            <button
+                              type="button"
+                              className={styles.eyeButton}
+                              onClick={() => setShowPassword((prev) => !prev)}
+                              aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                              {showPassword ? "🙈" : "👁️"}
+                            </button>
+                          </div>
+                        </label>
             {errorMessage && (
               <p className={styles.formError} role="alert">
                 {errorMessage}

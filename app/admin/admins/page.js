@@ -1,7 +1,6 @@
 "use client";
 
 import { startTransition, useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import adminStyles from "../page.module.css";
 import styles from "./page.module.css";
@@ -137,39 +136,11 @@ export default function AdminsPage() {
 		}
 	}
 
-	function logout() {
-		window.localStorage.removeItem(savedUserKey);
-		router.replace("/admin/security");
-	}
-
 	if (!accessToken) return null;
 
 	return (
-		<main className={adminStyles.admin}>
-			<aside className={adminStyles.sidebar}>
-				<div className={adminStyles.brand}>
-					<span className={adminStyles.brandMark}>▣</span>
-					<span>BookMyPhotographer <b>|</b> <em>Admin</em></span>
-				</div>
-				<nav className={adminStyles.navigation} aria-label="Admin navigation">
-					<Link className={adminStyles.navItem} href="/admin">⌂ <span>Dashboard</span></Link>
-					<Link className={adminStyles.navItem} href="/admin/partner_companis">▣ <span>Partner Companies</span></Link>
-					<span className={adminStyles.navItemActive} aria-current="page">♙ <span>Manage Admins</span></span>
-				</nav>
-				<div className={adminStyles.sidebarFooter}>BookMyPhotographer Admin v1.0</div>
-			</aside>
-
-			<section className={adminStyles.workspace}>
-				<header className={adminStyles.topbar}>
-					<div className={adminStyles.breadcrumb}>Admin <span>/</span> Manage Admins</div>
-					<div className={styles.topbarLinks}>
-						<Link href="/admin">Admin dashboard</Link>
-							<Link href="/admin/profile">My profile</Link>
-						<button type="button" onClick={logout}>Log out</button>
-					</div>
-				</header>
-
-				<div className={adminStyles.content}>
+		<>
+			<div>
 					<div className={adminStyles.pageIntro}>
 						<div>
 							<p className={adminStyles.eyebrow}>SUPERADMIN / ACCESS CONTROL</p>
@@ -229,8 +200,7 @@ export default function AdminsPage() {
 							</table>
 						</div>
 					</section>
-				</div>
-			</section>
+			</div>
 
 			{isFormOpen && (
 				<div className={styles.modalBackdrop} onMouseDown={(event) => { if (event.target === event.currentTarget && !isSaving) setIsFormOpen(false); }}>
@@ -248,6 +218,6 @@ export default function AdminsPage() {
 					</section>
 				</div>
 			)}
-		</main>
+		</>
 	);
 }

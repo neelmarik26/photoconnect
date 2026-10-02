@@ -15,7 +15,7 @@ const links = [
   ["contact", "Contact Us", "/contact"],
 ];
 
-export default function Navbar({ current = "home", hideAuthActions = false }) {
+export default function Navbar({ current = "home", hideAuthActions = false, fullWidth = false }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -78,7 +78,7 @@ export default function Navbar({ current = "home", hideAuthActions = false }) {
   }
 
   return (
-    <header className={styles.header}>
+      <header className={`${styles.header} ${fullWidth ? styles.fullWidth : ""}`}>
       <Link href="/" className={styles.logo}>
         <Image
           src={`${basePath}/bookmyphotographer-logo.svg`}

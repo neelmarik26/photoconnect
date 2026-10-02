@@ -9,6 +9,11 @@
   background: #0a202c;
   color: #fff;
 }
+
+.header.fullWidth {
+  padding: 0 24px;
+  max-width: none;
+}
 .logo {
   display: flex;
   min-width: 182px;

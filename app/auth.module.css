@@ -141,6 +141,40 @@
   font-size: 11px;
   outline-color: #1878f2;
 }
+
+.passwordWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.passwordWrapper input {
+  padding-right: 44px;
+}
+
+.eyeButton {
+  position: absolute;
+  right: 8px;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #71818d;
+  cursor: pointer;
+}
+
+.eyeButton:hover {
+  color: #1878f2;
+}
+
+.eyeButton:focus-visible {
+  outline: 2px solid #1878f2;
+  outline-offset: 1px;
+}
 .formError {
   display: flex;
   align-items: flex-start;

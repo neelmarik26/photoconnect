@@ -730,3 +730,8 @@
         padding-bottom: 24px;
     }
 }
+
+    .securityPage {
+      min-height: 100vh;
+      width: 100%;
+    }

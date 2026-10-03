@@ -175,6 +175,21 @@
   outline: 2px solid #1878f2;
   outline-offset: 1px;
 }
+
+.eyeButton svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.eyeButton svg circle {
+  fill: currentColor;
+  stroke: none;
+}
 .formError {
   display: flex;
   align-items: flex-start;

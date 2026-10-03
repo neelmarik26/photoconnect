@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import styles from "./page.module.css";
@@ -8,12 +8,19 @@ import styles from "./page.module.css";
 const savedUserKey = "photoConnectUser";
 const navigation = [
   ["dashboard", "Dashboard", "⌂"],
-  ["approvals", "Photographer Approvals", "▦"],
   ["manage", "Manage Photographers", "♟"],
   ["partners", "Partner Companies", "▣"],
   ["gallery", "Gallery / Banner", "▤"],
   ["admins", "Manage Admins", "♙"],
 ];
+const pageTitleByPath = {
+  "/admin": "Manage Photographers",
+  "/admin/dashboard": "Dashboard",
+  "/admin/partner_companis": "Partner Companies",
+  "/admin/gallery": "Gallery / Banner",
+  "/admin/admins": "Manage Admins",
+  "/admin/profile": "Profile",
+};
 
 export default function AdminLayout({ children }) {
   const router = useRouter();
@@ -22,8 +29,33 @@ export default function AdminLayout({ children }) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [canEditAdminProfile, setCanEditAdminProfile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef(null);
   const normalizedPathname = pathname.replace(/\/+$/, "") || "/";
   const isSecurityPage = normalizedPathname === "/admin/security";
+  const currentPageTitle = pageTitleByPath[normalizedPathname] ||
+    normalizedPathname.split("/").filter(Boolean).pop()?.replaceAll("_", " ") || "Dashboard";
+
+  useEffect(() => {
+    if (!profileMenuOpen) return;
+
+    function closeOnOutsideClick(event) {
+      if (!profileMenuRef.current?.contains(event.target)) {
+        setProfileMenuOpen(false);
+      }
+    }
+
+    function closeOnEscape(event) {
+      if (event.key === "Escape") setProfileMenuOpen(false);
+    }
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [profileMenuOpen]);
 
   useEffect(() => {
     const savedUser = window.localStorage.getItem(savedUserKey);
@@ -62,6 +94,7 @@ export default function AdminLayout({ children }) {
 
   function logout() {
     window.localStorage.removeItem(savedUserKey);
+    setProfileMenuOpen(false);
     router.replace("/admin/security");
   }
 
@@ -86,17 +119,30 @@ export default function AdminLayout({ children }) {
         <nav className={styles.navigation} aria-label="Admin navigation">
           {navigation
             .filter(([key]) => key !== "admins" || isSuperAdmin)
-            .map(([key, label, icon]) => (
-              <Link
-                key={key}
-                href={key === "partners" ? "/admin/partner_companis" : key === "admins" ? "/admin/admins" : "/admin"}
-                className={styles.navItem}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <span className={styles.navIcon}>{icon}</span>
-                {label}
-              </Link>
-            ))}
+            .map(([key, label, icon]) => {
+              const href = key === "dashboard"
+                ? "/admin/dashboard"
+                : key === "partners"
+                    ? "/admin/partner_companis"
+                    : key === "admins"
+                      ? "/admin/admins"
+                      : key === "gallery"
+                        ? "/admin/gallery"
+                        : "/admin";
+              const isActive = normalizedPathname === href;
+
+              return (
+                <Link
+                  key={key}
+                  href={href}
+                  className={isActive ? styles.navItemActive : styles.navItem}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <span className={styles.navIcon}>{icon}</span>
+                  {label}
+                </Link>
+              );
+            })}
           <button
             className={styles.navItem}
             type="button"
@@ -127,18 +173,43 @@ export default function AdminLayout({ children }) {
           >
             ☰
           </button>
-          <div className={styles.breadcrumb}>
-            Admin
-          </div>
+          <nav className={styles.breadcrumb} aria-label="Breadcrumb">
+            <Link href="/admin/dashboard">Admin</Link>
+            <span aria-hidden="true">/</span>
+            <span aria-current="page">{currentPageTitle}</span>
+          </nav>
           <div className={styles.topbarActions}>
-            {canEditAdminProfile && (
-              <Link className={styles.profileLink} href="/admin/profile">
+            <div className={styles.profileMenuWrap} ref={profileMenuRef}>
+              <button
+                className={styles.profileMenuTrigger}
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={profileMenuOpen}
+                aria-controls="admin-profile-menu"
+                onClick={() => setProfileMenuOpen((isOpen) => !isOpen)}
+              >
                 My profile
-              </Link>
-            )}
-            <button className={styles.logoutButton} type="button" onClick={logout}>
-              Log out
-            </button>
+                <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+                  <path d="m5 7.5 5 5 5-5" />
+                </svg>
+              </button>
+              {profileMenuOpen && (
+                <div className={styles.profileDropdown} id="admin-profile-menu" role="menu">
+                  {canEditAdminProfile && (
+                    <Link
+                      href="/admin/profile"
+                      role="menuitem"
+                      onClick={() => setProfileMenuOpen(false)}
+                    >
+                      Edit profile
+                    </Link>
+                  )}
+                  <button type="button" role="menuitem" onClick={logout}>
+                    Log out
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </header>
         <div className={styles.content}>{children}</div>

@@ -129,6 +129,15 @@
     font-size: 12px;
 }
 
+.breadcrumb a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    color: #16877e;
+}
+
 .breadcrumb span {
     margin: 0 10px;
     color: #c1cbd4;
@@ -138,6 +147,99 @@
     display: flex;
     align-items: center;
     gap: 22px;
+}
+
+.profileMenuWrap {
+    position: relative;
+}
+
+.profileMenuTrigger {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 36px;
+    padding: 0 9px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #405567;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 650;
+    cursor: pointer;
+}
+
+.profileMenuTrigger:hover,
+.profileMenuTrigger[aria-expanded="true"] {
+    background: #f7faf9;
+}
+
+.profileMenuTrigger svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: #738590;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.7;
+    transition: transform 160ms ease;
+}
+
+.profileMenuTrigger[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+}
+
+.profileMenuTrigger:focus-visible {
+    outline: 2px solid #16877e;
+    outline-offset: 2px;
+}
+
+.profileDropdown {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 8px);
+    right: 0;
+    display: grid;
+    width: 176px;
+    padding: 5px;
+    border: 1px solid #e1e8e8;
+    border-radius: 6px;
+    background: #fff;
+    box-shadow: 0 12px 28px rgb(32 56 72 / 15%);
+    animation: profileDropdownEnter 140ms ease-out;
+}
+
+.profileDropdown a,
+.profileDropdown button {
+    display: block;
+    width: 100%;
+    padding: 10px 11px;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #425965;
+    font: inherit;
+    font-size: 12px;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.profileDropdown a:hover,
+.profileDropdown button:hover {
+    background: #eef6f3;
+    color: #167968;
+}
+
+.profileDropdown button {
+    border-top: 1px solid #edf1f1;
+    border-radius: 0 0 4px 4px;
+    color: #a44d45;
+}
+
+@keyframes profileDropdownEnter {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .iconButton,

@@ -10,11 +10,23 @@ import Footer from "./components/Footer";
 const calendarDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const savedUserKey = "photoConnectUser";
 const defaultProfileImage = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/defolt_profile_pic.jpg`;
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
 function getImageUrl(path) {
   if (!path) return defaultProfileImage;
   if (/^https?:\/\//i.test(path)) return path;
   return `${process.env.NEXT_PUBLIC_BACKEND_URL}${path}`;
+}
+
+function getUploadUrl(path) {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+  // If path starts with /public/, it's a backend-served static file
+  if (path.startsWith("/public/")) {
+    return `${BACKEND_URL}${path}`;
+  }
+  return `${BASE_PATH}${path}`;
 }
 
 function mapPhotographer(user) {
@@ -70,8 +82,77 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState("");
   const [profileDragging, setProfileDragging] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [heroConfig, setHeroConfig] = useState({
+    images: [],
+    title: "Find the Perfect\nPhotographer for Your Event",
+    description: "Talented. Trusted. Available.",
+    script: "Moments\nThat Last Forever",
+  });
+  const [heroConfigLoaded, setHeroConfigLoaded] = useState(false);
   const swipeStartX = useRef(null);
   const profileSwipeStartY = useRef(null);
+
+  // Load hero images from backend API
+  useEffect(() => {
+    async function loadHeroImages() {
+      try {
+        const response = await fetch(`${BACKEND_URL}/api/hero-imgs/config`);
+        if (response.ok) {
+          const data = await response.json();
+          setHeroConfig((prev) => ({
+            ...prev,
+            images: data.images || [],
+            title: data.title || prev.title,
+            description: data.description || prev.description,
+            script: data.script || prev.script,
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to load hero images from backend:", error);
+      } finally {
+        setHeroConfigLoaded(true);
+      }
+    }
+    loadHeroImages();
+
+    // Listen for changes from admin panel
+    function handleCustomEvent(event) {
+      if (event.detail?.hero) {
+        let heroData = event.detail.hero;
+        // Migration for old format
+        if (heroData.image && !heroData.images) {
+          heroData = { ...heroData, images: heroData.image ? [heroData.image] : [] };
+        }
+        setHeroConfig((prev) => ({ ...prev, ...heroData }));
+      }
+    }
+
+    window.addEventListener("heroConfigChanged", handleCustomEvent);
+
+    return () => {
+      window.removeEventListener("heroConfigChanged", handleCustomEvent);
+    };
+  }, []);
+
+  // Apply text updates from the admin editor when it is open in the same tab.
+  useEffect(() => {
+    function handleCustomEvent(event) {
+      if (event.detail?.hero) {
+        setHeroConfig((prev) => ({
+          ...prev,
+          title: event.detail.hero.title || prev.title,
+          description: event.detail.hero.description || prev.description,
+          script: event.detail.hero.script || prev.script,
+        }));
+      }
+    }
+
+    window.addEventListener("heroConfigChanged", handleCustomEvent);
+
+    return () => {
+      window.removeEventListener("heroConfigChanged", handleCustomEvent);
+    };
+  }, []);
 
   useEffect(() => {
     let isCurrent = true;
@@ -111,11 +192,29 @@ export default function Home() {
     };
   }, []);
 
-  const heroImages = [
+  // Default fallback images if no custom hero images are set
+  const defaultHeroImages = [
     "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1800&q=85",
     "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=1800&q=85",
     "https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1800&q=85",
   ];
+
+  // Use custom hero images if available, otherwise fall back to default rotation
+  // Only use backend images after they're loaded to avoid SSR flash of default images
+  const heroImages = heroConfigLoaded && heroConfig.images.length > 0
+    ? heroConfig.images.map((img) => getUploadUrl(typeof img === "string" ? img : img.url))
+    : defaultHeroImages;
+  const activeSlide = slide % heroImages.length;
+
+  useEffect(() => {
+    if (!heroConfigLoaded || heroImages.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setSlide((currentSlide) => (currentSlide + 1) % heroImages.length);
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [heroConfigLoaded, heroImages.length, slide]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -186,6 +285,9 @@ export default function Home() {
   }, [selectedPhotographer]);
 
   function handleHeroPointerDown(event) {
+    swipeStartX.current = null;
+    if (event.target.closest("button, a, input")) return;
+
     swipeStartX.current = event.clientX;
     event.currentTarget.setPointerCapture(event.pointerId);
   }
@@ -308,50 +410,57 @@ export default function Home() {
         onPointerUp={handleHeroPointerUp}
         onPointerCancel={handleHeroPointerCancel}
       >
-        <div
-          key={slide}
-          className={styles.heroImage}
-          style={{
-            backgroundImage: `linear-gradient(90deg, rgba(4, 20, 28, .68), rgba(4, 20, 28, .06)), url(${heroImages[slide]})`,
-          }}
-        />
-        <button
-          className={`${styles.arrow} ${styles.left}`}
-          onClick={() =>
-            setSlide((slide + heroImages.length - 1) % heroImages.length)
-          }
-        >
-          ‹
-        </button>
-        <div className={styles.heroWords}>
-          <h1>
-            Find the Perfect
-            <br />
-            Photographer for Your Event
-          </h1>
-          <p>Talented. Trusted. Available.</p>
-        </div>
-        <p className={styles.script}>
-          Moments
-          <br />
-          That Last Forever
-        </p>
-        <button
-          className={`${styles.arrow} ${styles.right}`}
-          onClick={() => setSlide((slide + 1) % heroImages.length)}
-        >
-          ›
-        </button>
-        <div className={styles.dots}>
-          {heroImages.map((_, index) => (
-            <button
-              key={index}
-              className={slide === index ? styles.selected : ""}
-              onClick={() => setSlide(index)}
-              aria-label={`Show slide ${index + 1}`}
+        {!heroConfigLoaded && heroConfig.images.length === 0 ? (
+          <div className={styles.heroLoading}>Loading hero images...</div>
+        ) : (
+          <>
+            <div
+              key={slide}
+              className={styles.heroImage}
+              style={{
+                backgroundImage: `linear-gradient(90deg, rgba(4, 20, 28, .68), rgba(4, 20, 28, .06)), url(${heroImages[activeSlide]})`,
+              }}
             />
-          ))}
-        </div>
+            {heroImages.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className={`${styles.arrow} ${styles.left}`}
+                  onClick={() =>
+                    setSlide((activeSlide + heroImages.length - 1) % heroImages.length)
+                  }
+                  aria-label="Previous hero image"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.arrow} ${styles.right}`}
+                  onClick={() => setSlide((activeSlide + 1) % heroImages.length)}
+                  aria-label="Next hero image"
+                >
+                  ›
+                </button>
+                <div className={styles.dots}>
+                  {heroImages.map((_, index) => (
+                    <button
+                      type="button"
+                      key={index}
+                      className={activeSlide === index ? styles.selected : ""}
+                      onClick={() => setSlide(index)}
+                      aria-label={`Show slide ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+            <div className={styles.heroWords}>
+              <h1 dangerouslySetInnerHTML={{ __html: heroConfig.title.replace(/\n/g, "<br />") }} />
+              <p>{heroConfig.description}</p>
+            </div>
+            <p className={styles.script} dangerouslySetInnerHTML={{ __html: heroConfig.script.replace(/\n/g, "<br />") }} />
+          </>
+        )}
       </section>
       <section id="photographers" className={styles.photographers}>
         <div className={styles.sectionHeading}>
@@ -362,10 +471,19 @@ export default function Home() {
               view details.
             </p>
           </div>
-          <span>
+          <button
+            className={styles.scrollHintButton}
+            type="button"
+            aria-label="Scroll to photographer listings"
+            onClick={() => document.getElementById("photographer-listings")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          >
             <span className={styles.scrollHintText}>Scroll to discover more</span>
-            <b>⌄</b>
-          </span>
+            <span className={styles.scrollHintIcon} aria-hidden="true">
+              <svg viewBox="0 0 20 20" focusable="false">
+                <path d="m5 7.5 5 5 5-5" />
+              </svg>
+            </span>
+          </button>
         </div>
 
         {/* Search Section */}
@@ -383,16 +501,16 @@ export default function Home() {
         </div>
 
         {photographersLoading ? (
-          <div className={styles.loading}>
+          <div id="photographer-listings" className={styles.loading}>
             <i />
             <span>Loading photographers...</span>
           </div>
         ) : photographersError ? (
-          <p className={styles.photographerState} role="alert">
+          <p id="photographer-listings" className={styles.photographerState} role="alert">
             {photographersError}
           </p>
         ) : photographers.length ? (
-          <div className={styles.grid}>
+          <div id="photographer-listings" className={styles.grid}>
             {photographers.map((person) => (
               <PhotographerCard
                 key={person._id}
@@ -402,7 +520,7 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <p className={styles.photographerState}>
+          <p id="photographer-listings" className={styles.photographerState}>
             {photographers.length > 0
               ? "No photographers match your filters."
               : "No photographer profiles are available yet."}

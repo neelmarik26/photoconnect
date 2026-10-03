@@ -67,6 +67,17 @@
 .hero:active {
   cursor: grabbing;
 }
+.heroLoading {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a202c;
+  color: #fff;
+  font-size: 18px;
+}
 .heroImage {
   position: absolute;
   inset: 0;
@@ -174,31 +185,51 @@
   color: #5e7180;
   margin-top: 4px;
 }
-.sectionHeading > span {
+.scrollHintButton {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  flex: 0 0 auto;
+  margin-left: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #536b7d;
+  font: inherit;
   font-size: 12px;
-  color: #617383;
+  font-weight: 650;
+  cursor: pointer;
 }
-.sectionHeading b {
+.scrollHintButton:hover {
+  color: #147c73;
+}
+.scrollHintButton:focus-visible {
+  border-radius: 5px;
+  outline: 2px solid #16877e;
+  outline-offset: 4px;
+}
+.scrollHintIcon {
   display: inline-grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
-  border: 1px solid #536b7d;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #afbec4;
   border-radius: 50%;
-  font-size: 15px;
-  animation: scrollHint 1.5s ease-in-out infinite;
+  background: #fff;
+  transition: border-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
-@keyframes scrollHint {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(4px);
-  }
+.scrollHintIcon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+}
+.scrollHintButton:hover .scrollHintIcon {
+  border-color: #16877e;
+  transform: translateY(2px);
 }
 
 /* Search Section */
@@ -1096,25 +1127,17 @@
   .sectionHeading > div {
     min-width: 0;
   }
-  .sectionHeading > span {
+  .scrollHintButton {
     display: inline-flex;
     align-items: center;
-    flex: 0 0 auto;
-    gap: 0;
     margin-left: auto;
-    padding: 0;
-    border: 0;
-    background: transparent;
-    color: #536b7d;
-    font-size: 0;
   }
   .scrollHintText {
     display: none;
   }
-  .sectionHeading b {
-    width: 20px;
-    height: 20px;
-    font-size: 13px;
+  .scrollHintIcon {
+    width: 30px;
+    height: 30px;
   }
   .grid {
     grid-template-columns: minmax(0, 420px);
@@ -1233,10 +1256,10 @@
   .partners > p {
     font-size: 9px;
   }
-  .sectionHeading > span {
+  .scrollHintButton {
     font-size: 8px;
   }
-  .sectionHeading b {
+  .scrollHintIcon {
     width: 17px;
     height: 17px;
   }

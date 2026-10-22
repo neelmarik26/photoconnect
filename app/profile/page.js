@@ -10,6 +10,8 @@ import styles from "./page.module.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const savedUserKey = "photoConnectUser";
+const maxSamplePhotos = 5;
+const maxSamplePhotoSize = 5 * 1024 * 1024;
 
 const editableSections = [
   {
@@ -38,6 +40,7 @@ const editableSections = [
       ["specialties", "Specialties", "text"],
       ["experienceYears", "Experience (years)", "number"],
       ["dob", "Date of birth", "date"],
+      ["age", "Age", "computed"],
       ["portfolioUrl", "Portfolio", "url"],
       ["bio", "Bio", "textarea"],
       ["about", "About", "textarea"],
@@ -73,6 +76,7 @@ const profileSections = [
       ["specialties", "Specialties"],
       ["experienceYears", "Experience"],
       ["dob", "Date of birth"],
+      ["age", "Age"],
       ["bio", "Bio"],
       ["about", "About"],
       ["portfolioUrl", "Portfolio"],
@@ -81,6 +85,25 @@ const profileSections = [
     ],
   },
 ];
+
+function calculateAge(value) {
+  if (!value) return null;
+
+  const birthDate = new Date(`${String(value).slice(0, 10)}T00:00:00.000Z`);
+  if (Number.isNaN(birthDate.getTime())) return null;
+
+  const today = new Date();
+  let age = today.getUTCFullYear() - birthDate.getUTCFullYear();
+  if (
+    today.getUTCMonth() < birthDate.getUTCMonth() ||
+    (today.getUTCMonth() === birthDate.getUTCMonth() &&
+      today.getUTCDate() < birthDate.getUTCDate())
+  ) {
+    age -= 1;
+  }
+
+  return age >= 0 ? age : null;
+}
 
 function formatValue(field, value) {
   if (value === null || value === undefined || value === "") {
@@ -96,6 +119,9 @@ function formatValue(field, value) {
       : date.toLocaleDateString();
   }
   if (field === "experienceYears") {
+    return `${value} years`;
+  }
+  if (field === "age") {
     return `${value} years`;
   }
   if (field === "portfolioUrl") {
@@ -194,9 +220,13 @@ export default function ProfilePage() {
     useState(false);
   const [galleryPhotos, setGalleryPhotos] = useState([]);
   const [galleryLoading, setGalleryLoading] = useState(true);
-  const [sampleFiles, setSampleFiles] = useState([null, null, null]);
-  const [samplePreviewUrls, setSamplePreviewUrls] = useState(["", "", ""]);
-  const samplePreviewUrlsRef = useRef(["", "", ""]);
+  const [sampleFiles, setSampleFiles] = useState(() =>
+    Array(maxSamplePhotos).fill(null),
+  );
+  const [samplePreviewUrls, setSamplePreviewUrls] = useState(() =>
+    Array(maxSamplePhotos).fill(""),
+  );
+  const samplePreviewUrlsRef = useRef(Array(maxSamplePhotos).fill(""));
   const sampleFileInputRefs = useRef([]);
   const [galleryLoadFailed, setGalleryLoadFailed] = useState(false);
   const [isSavingSamples, setIsSavingSamples] = useState(false);
@@ -273,7 +303,7 @@ export default function ProfilePage() {
           photos
             .filter((photo) => !photo.isProfileImage && photo.link)
             .sort((first, second) => first.sequence - second.sequence)
-            .slice(0, 3),
+            .slice(0, maxSamplePhotos),
         );
       })
       .catch((error) => {
@@ -326,6 +356,7 @@ export default function ProfilePage() {
 
   const fallbackImage = `${basePath}/defolt_profile_pic.jpg`;
   const todayValue = toDateValue(new Date());
+  const dobTodayValue = new Date().toISOString().slice(0, 10);
   const calendarYear = calendarMonth.getFullYear();
   const calendarMonthIndex = calendarMonth.getMonth();
   const calendarDays = [
@@ -400,12 +431,12 @@ export default function ProfilePage() {
     samplePreviewUrlsRef.current.forEach((previewUrl) => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     });
-    samplePreviewUrlsRef.current = ["", "", ""];
+    samplePreviewUrlsRef.current = Array(maxSamplePhotos).fill("");
     sampleFileInputRefs.current.forEach((input) => {
       if (input) input.value = "";
     });
-    setSamplePreviewUrls(["", "", ""]);
-    setSampleFiles([null, null, null]);
+    setSamplePreviewUrls(Array(maxSamplePhotos).fill(""));
+    setSampleFiles(Array(maxSamplePhotos).fill(null));
   }
 
   async function submitProfile(event) {
@@ -482,6 +513,9 @@ export default function ProfilePage() {
       setSaveMessageIsError(false);
       return;
     }
+    if (!Object.hasOwn(payload, "dob")) {
+      payload.dob = nextValues.dob;
+    }
 
     setIsSaving(true);
     let detailsSaved = false;
@@ -552,28 +586,20 @@ export default function ProfilePage() {
       sampleFiles.some(
         (file) =>
           file &&
-          (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024),
+          (!file.type.startsWith("image/") || file.size > maxSamplePhotoSize),
       )
     ) {
       setSampleMessage("Choose image files no larger than 5 MB each.");
       setSampleMessageIsError(true);
       return;
     }
-    if (sampleFiles.every((file, index) => !file && !galleryPhotos[index])) {
-      setSampleMessage("Upload a photo for each of the three sample slots.");
-      setSampleMessageIsError(true);
-      return;
-    }
     if (sampleFiles.every((file) => !file)) {
-      setSampleMessage("Choose at least one sample photo to update.");
-      setSampleMessageIsError(false);
-      return;
-    }
-    if (sampleFiles.some((file, index) => !file && !galleryPhotos[index])) {
       setSampleMessage(
-        "Add a photo to each of the three sample slots before saving.",
+        galleryPhotos.length
+          ? "Choose at least one sample photo to update."
+          : "Choose at least one portfolio sample photo.",
       );
-      setSampleMessageIsError(true);
+      setSampleMessageIsError(!galleryPhotos.length);
       return;
     }
 
@@ -610,7 +636,7 @@ export default function ProfilePage() {
       }
 
       clearSampleFiles();
-      setSampleMessage("All three sample photos are saved to your profile.");
+      setSampleMessage("Portfolio sample photos saved successfully.");
       setSampleMessageIsError(false);
     } catch (error) {
       setSampleMessage(
@@ -1005,7 +1031,7 @@ export default function ProfilePage() {
                                         type="button"
                                         aria-label={displayDate(dayValue)}
                                         aria-pressed={isSelected}
-                                        disabled={dayValue > todayValue}
+                                        disabled={dayValue > dobTodayValue}
                                         onClick={() => {
                                           setDobValue(dayValue);
                                           setIsCalendarOpen(false);
@@ -1029,6 +1055,15 @@ export default function ProfilePage() {
                               </div>
                             )}
                           </div>
+                        ) : type === "computed" ? (
+                          <input
+                            id={field}
+                            type="number"
+                            value={calculateAge(dobValue) ?? ""}
+                            placeholder="Select your date of birth"
+                            readOnly
+                            aria-readonly="true"
+                          />
                         ) : (
                           <input
                             id={field}
@@ -1131,8 +1166,9 @@ export default function ProfilePage() {
                 <section className={styles.editSection}>
                   <h2>Portfolio sample photos</h2>
                   <p className={styles.sampleIntro}>
-                    Add three photos to show clients examples of your work. Each
-                    photo is saved to your profile gallery.
+                    Upload up to five photos to show clients examples of your
+                    work. Each photo can be up to 5 MB and is saved to your
+                    profile gallery.
                   </p>
                   <div className={styles.samplePhotoGrid}>
                     {sampleFiles.map((file, index) => {
@@ -1475,6 +1511,11 @@ export default function ProfilePage() {
                             <dd>
                               {field === "specialties" ? (
                                 <SpecialtyTags value={profile[field]} />
+                              ) : field === "age" ? (
+                                formatValue(
+                                  field,
+                                  calculateAge(profile.dob) ?? profile.age,
+                                )
                               ) : (
                                 formatValue(field, profile[field])
                               )}

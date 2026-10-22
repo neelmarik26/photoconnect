@@ -1,14 +1,14 @@
 import Image from "next/image";
+import Link from "next/link";
 import styles from "../page.module.css";
 
-export default function PhotographerCard({ person, onSelect }) {
+export default function PhotographerCard({ person }) {
   return (
     <article className={styles.card}>
-      <button
+      <Link
         className={styles.cardOpen}
-        type="button"
+        href={`/photographers/${encodeURIComponent(person._id)}`}
         aria-label={`View ${person.name}'s photographer profile`}
-        onClick={() => onSelect(person)}
       >
         <div className={styles.photo}>
         <Image
@@ -41,7 +41,7 @@ export default function PhotographerCard({ person, onSelect }) {
             )}
           </p>
         </div>
-      </button>
+      </Link>
     </article>
   );
 }

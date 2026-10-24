@@ -240,10 +240,15 @@
   border: 1px solid #e6ebed;
   border-radius: 8px;
   box-shadow: 0 2px 5px #1e3c4d08;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 .searchBox {
   position: relative;
-  max-width: 400px;
+  flex: 1 1 300px;
+  min-width: 260px;
 }
 .searchIcon {
   position: absolute;
@@ -271,6 +276,38 @@
 }
 .searchBox input::placeholder {
   color: #9aa5b1;
+}
+
+.filterDropdowns {
+  display: flex;
+  flex: 1 1 420px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.filterSelect {
+  flex: 1;
+  min-width: 200px;
+  padding: 12px 16px;
+  border: 1px solid #d1d9de;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #102533;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.filterSelect:focus {
+  outline: none;
+  border-color: #1878f2;
+  box-shadow: 0 0 0 3px #1878f233;
+}
+
+.filterSelect:disabled {
+  background: #f4f7f8;
+  color: #9aa5b1;
+  cursor: not-allowed;
 }
 
 .grid {
@@ -1162,8 +1199,10 @@
   .filterSection {
     padding: 16px;
   }
-  .searchBox {
-    max-width: none;
+  .searchBox,
+  .filterDropdowns {
+    flex-basis: 100%;
+    min-width: 0;
   }
 
   .partners,

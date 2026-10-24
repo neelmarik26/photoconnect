@@ -58,7 +58,19 @@ export default function PhotographerDetailsPage() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
-  const [selectedDate, setSelectedDate] = useState("");
+    const [selectedDates, setSelectedDates] = useState([]);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [bookingForm, setBookingForm] = useState({
+    eventDate: [],
+    eventLocation: "",
+    durationHours: 4,
+    totalPrice: 600,
+    notes: "",
+    specialRequirements: "",
+  });
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingError, setBookingError] = useState("");
+  const [bookingSuccess, setBookingSuccess] = useState(false);
 
   useEffect(() => {
     if (typeof photographerId !== "string") return;
@@ -147,6 +159,72 @@ export default function PhotographerDetailsPage() {
   const occupiedDates = Array.isArray(photographer?.occupiedDates)
     ? photographer.occupiedDates
     : [];
+
+    const handleBookingSubmit = async (e) => {
+      e.preventDefault();
+      setBookingError("");
+      setBookingSuccess(false);
+      setBookingLoading(true);
+
+      // Validate no occupied dates in the form
+      const hasOccupiedDate = bookingForm.eventDate.some((date) => {
+        const dateKey = date?.slice(0, 10);
+        return occupiedDates.some((d) => String(d).slice(0, 10) === dateKey);
+      });
+
+      if (hasOccupiedDate) {
+        setBookingError("One or more selected dates are already booked. Please choose different dates.");
+        setBookingLoading(false);
+        return;
+      }
+
+      try {
+        const user = JSON.parse(window.localStorage.getItem("photoConnectUser") || "{}");
+        if (!user.userId) {
+          throw new Error("Please log in to book a photographer.");
+        }
+
+        const response = await fetch(`${backendUrl}/api/bookings`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            accept: "application/json",
+          },
+          body: JSON.stringify({
+            photographerId,
+            userId: user.userId,
+            eventDate: bookingForm.eventDate.filter(Boolean),
+            eventLocation: bookingForm.eventLocation,
+            durationHours: bookingForm.durationHours,
+            totalPrice: bookingForm.totalPrice,
+            notes: bookingForm.notes,
+            specialRequirements: bookingForm.specialRequirements,
+          }),
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(result?.message || "Could not create booking. Please try again.");
+        }
+
+        setBookingSuccess(true);
+        setBookingForm({
+          eventDate: [],
+          eventLocation: "",
+          durationHours: 4,
+          totalPrice: 600,
+          notes: "",
+          specialRequirements: "",
+        });
+        setSelectedDates([]);
+        setShowBookingModal(false);
+      } catch (err) {
+        setBookingError(err.message || "Could not create booking. Please try again.");
+      } finally {
+        setBookingLoading(false);
+      }
+    };
 
   return (
     <main className={styles.page}>
@@ -344,7 +422,7 @@ export default function PhotographerDetailsPage() {
                           (date) => String(date).slice(0, 10) === dateKey,
                         );
                       const isSelected =
-                        cell.currentMonth && dateKey === selectedDate;
+                                          cell.currentMonth && selectedDates.includes(dateKey);
 
                       return (
                         <button
@@ -360,35 +438,233 @@ export default function PhotographerDetailsPage() {
                                   : styles.available
                           }
                           aria-pressed={isSelected}
-                          onClick={() =>
-                            cell.currentMonth &&
-                            !isBooked &&
-                            setSelectedDate(dateKey)
-                          }
-                          disabled={!cell.currentMonth || isBooked}
-                        >
-                          {cell.day}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className={styles.calendarLegend}>
-                    <span><i className={styles.availableDot} /> Available</span>
-                    <span><i className={styles.bookedDot} /> Booked</span>
-                    <span><i className={styles.selectedDot} /> Selected</span>
-                  </div>
-                  {selectedDate && (
-                    <p className={styles.selectedDate}>
-                      Selected date: {new Date(`${selectedDate}T00:00:00`).toLocaleDateString()}
-                    </p>
-                  )}
-                </section>
-              </div>
-            </section>
-          </>
-        )}
-      </div>
-      <Footer />
-    </main>
-  );
-}
+                                            onClick={() => {
+                                              if (!cell.currentMonth || isBooked) return;
+                                              setSelectedDates((prev) => {
+                                                if (prev.includes(dateKey)) {
+                                                  return prev.filter((d) => d !== dateKey);
+                                                }
+                                                if (prev.length >= 3) {
+                                                  return prev;
+                                                }
+                                                return [...prev, dateKey];
+                                              });
+                                            }}
+                                            disabled={!cell.currentMonth || isBooked}
+                                          >
+                                            {cell.day}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                    <div className={styles.calendarLegend}>
+                                      <span><i className={styles.availableDot} /> Available</span>
+                                      <span><i className={styles.bookedDot} /> Booked</span>
+                                      <span><i className={styles.selectedDot} /> Selected</span>
+                                    </div>
+                                    {selectedDates.length > 0 && (
+                                      <div className={styles.selectedDates}>
+                                        <p>Selected dates:</p>
+                                        <ul>
+                                          {selectedDates.map((date) => (
+                                            <li key={date}>
+                                              {new Date(`${date}T00:00:00`).toLocaleDateString()}
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    {selectedDates.length > 0 && (
+                                      <button
+                                        type="button"
+                                        className={styles.bookButton}
+                                        onClick={() => {
+                                          setBookingForm((prev) => ({
+                                            ...prev,
+                                            eventDate: selectedDates.map(
+                                              (d) => new Date(`${d}T10:00:00.000Z`).toISOString()
+                                            ),
+                                          }));
+                                          setShowBookingModal(true);
+                                        }}
+                                      >
+                                        Book Now ({selectedDates.length}/3)
+                                      </button>
+                                    )}
+                                  </section>
+                                </div>
+                              </section>
+                            </>
+                          )}
+
+                          {/* Booking Modal */}
+                          {showBookingModal && (
+                            <div className={styles.modalOverlay} onClick={() => setShowBookingModal(false)}>
+                              <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+                                <div className={styles.modalHeader}>
+                                  <h3>Book {photographer?.name}</h3>
+                                  <button
+                                    type="button"
+                                    className={styles.modalClose}
+                                    onClick={() => setShowBookingModal(false)}
+                                    aria-label="Close modal"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                                <form onSubmit={handleBookingSubmit} className={styles.modalForm}>
+                                  {bookingError && <div className={styles.modalError}>{bookingError}</div>}
+                                  {bookingSuccess && <div className={styles.modalSuccess}>Booking submitted successfully!</div>}
+
+                                  <div className={styles.modalField}>
+                                    <label htmlFor="eventDate">Event Date(s) *</label>
+                                                                      <div className={styles.dateInputs}>
+                                                                        {bookingForm.eventDate.map((date, idx) => (
+                                                                          <div key={idx} className={styles.dateInputRow}>
+                                                                            <input
+                                                                              type="date"
+                                                                              value={date?.slice(0, 10) || ""}
+                                                                              onChange={(e) => {
+                                                                                const newDate = e.target.value;
+                                                                                if (newDate) {
+                                                                                  const isoDate = new Date(`${newDate}T10:00:00.000Z`).toISOString();
+                                                                                  // Check if date is occupied
+                                                                                  const dateKey = newDate;
+                                                                                  const isOccupied = occupiedDates.some(
+                                                                                    (d) => String(d).slice(0, 10) === dateKey
+                                                                                  );
+                                                                                  if (isOccupied) {
+                                                                                    setBookingError(`Date ${dateKey} is already booked. Please select another date.`);
+                                                                                    return;
+                                                                                  }
+                                                                                  setBookingForm((prev) => ({
+                                                                                    ...prev,
+                                                                                    eventDate: prev.eventDate.map((d, i) => (i === idx ? isoDate : d)),
+                                                                                  }));
+                                                                                  setBookingError("");
+                                                                                }
+                                                                              }}
+                                                                              required
+                                                                              min={new Date().toISOString().slice(0, 10)}
+                                                                            />
+                                                                            {bookingForm.eventDate.length > 1 && (
+                                                                              <button
+                                                                                type="button"
+                                                                                className={styles.removeDateBtn}
+                                                                                onClick={() => {
+                                                                                  setBookingForm((prev) => ({
+                                                                                    ...prev,
+                                                                                    eventDate: prev.eventDate.filter((_, i) => i !== idx),
+                                                                                  }));
+                                                                                }}
+                                                                                aria-label="Remove date"
+                                                                              >
+                                                                                ×
+                                                                              </button>
+                                                                            )}
+                                                                          </div>
+                                                                        ))}
+                                                                        {bookingForm.eventDate.length < 3 && (
+                                                                          <button
+                                                                            type="button"
+                                                                            className={styles.addDateBtn}
+                                                                            onClick={() => {
+                                                                              setBookingForm((prev) => ({
+                                                                                ...prev,
+                                                                                eventDate: [...prev.eventDate, ""],
+                                                                              }));
+                                                                            }}
+                                                                          >
+                                                                            + Add another date
+                                                                          </button>
+                                                                        )}
+                                                                      </div>
+                                                                      <small>Select up to 3 event dates. Occupied dates will show an error.</small>
+                                                                      {bookingError && <span className={styles.modalErrorInline}>{bookingError}</span>}
+                                                                    </div>
+
+                                  <div className={styles.modalField}>
+                                    <label htmlFor="eventLocation">Event Location *</label>
+                                    <input
+                                      type="text"
+                                      id="eventLocation"
+                                      value={bookingForm.eventLocation}
+                                      onChange={(e) => setBookingForm((prev) => ({ ...prev, eventLocation: e.target.value }))}
+                                      placeholder="e.g., 123 Main St, City, State"
+                                      required
+                                    />
+                                  </div>
+
+                                  <div className={styles.modalField}>
+                                    <label htmlFor="durationHours">Duration (Hours) *</label>
+                                    <input
+                                      type="number"
+                                      id="durationHours"
+                                      value={bookingForm.durationHours}
+                                      onChange={(e) => setBookingForm((prev) => ({ ...prev, durationHours: parseInt(e.target.value) || 0 }))}
+                                      min="1"
+                                      max="24"
+                                      required
+                                    />
+                                  </div>
+
+                                  <div className={styles.modalField}>
+                                    <label htmlFor="totalPrice">Total Price (₹) *</label>
+                                    <input
+                                      type="number"
+                                      id="totalPrice"
+                                      value={bookingForm.totalPrice}
+                                      onChange={(e) => setBookingForm((prev) => ({ ...prev, totalPrice: parseInt(e.target.value) || 0 }))}
+                                      min="0"
+                                      required
+                                    />
+                                  </div>
+
+                                  <div className={styles.modalField}>
+                                    <label htmlFor="notes">Notes</label>
+                                    <textarea
+                                      id="notes"
+                                      value={bookingForm.notes}
+                                      onChange={(e) => setBookingForm((prev) => ({ ...prev, notes: e.target.value }))}
+                                      placeholder="e.g., Outdoor wedding ceremony"
+                                      rows="3"
+                                    />
+                                  </div>
+
+                                  <div className={styles.modalField}>
+                                    <label htmlFor="specialRequirements">Special Requirements</label>
+                                    <textarea
+                                      id="specialRequirements"
+                                      value={bookingForm.specialRequirements}
+                                      onChange={(e) => setBookingForm((prev) => ({ ...prev, specialRequirements: e.target.value }))}
+                                      placeholder="e.g., Need drone shots"
+                                      rows="3"
+                                    />
+                                  </div>
+
+                                  <div className={styles.modalActions}>
+                                    <button
+                                      type="button"
+                                      className={styles.modalCancel}
+                                      onClick={() => setShowBookingModal(false)}
+                                      disabled={bookingLoading}
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      type="submit"
+                                      className={styles.modalSubmit}
+                                      disabled={bookingLoading}
+                                    >
+                                      {bookingLoading ? "Booking..." : "Confirm Booking"}
+                                    </button>
+                                  </div>
+                                </form>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <Footer />
+                      </main>
+                    );
+                  }

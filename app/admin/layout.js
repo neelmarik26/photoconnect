@@ -9,6 +9,7 @@ const savedUserKey = "photoConnectUser";
 const navigation = [
   ["dashboard", "Dashboard", "⌂"],
   ["manage", "Manage Photographers", "♟"],
+  ["bookings", "Bookings", "📋"],
   ["partners", "Partner Companies", "▣"],
   ["gallery", "Gallery / Banner", "▤"],
   ["admins", "Manage Admins", "♙"],
@@ -16,6 +17,7 @@ const navigation = [
 const pageTitleByPath = {
   "/admin": "Manage Photographers",
   "/admin/dashboard": "Dashboard",
+  "/admin/bookings": "Bookings",
   "/admin/partner_companis": "Partner Companies",
   "/admin/gallery": "Gallery / Banner",
   "/admin/admins": "Manage Admins",
@@ -122,27 +124,29 @@ export default function AdminLayout({ children }) {
             .map(([key, label, icon]) => {
               const href = key === "dashboard"
                 ? "/admin/dashboard"
-                : key === "partners"
-                    ? "/admin/partner_companis"
-                    : key === "admins"
-                      ? "/admin/admins"
-                      : key === "gallery"
-                        ? "/admin/gallery"
-                        : "/admin";
-              const isActive = normalizedPathname === href;
+                          : key === "bookings"
+                            ? "/admin/bookings"
+                            : key === "partners"
+                              ? "/admin/partner_companis"
+                              : key === "admins"
+                                ? "/admin/admins"
+                                : key === "gallery"
+                                  ? "/admin/gallery"
+                                  : "/admin";
+                        const isActive = normalizedPathname === href;
 
-              return (
-                <Link
-                  key={key}
-                  href={href}
-                  className={isActive ? styles.navItemActive : styles.navItem}
-                  onClick={() => setSidebarOpen(false)}
-                >
-                  <span className={styles.navIcon}>{icon}</span>
-                  {label}
-                </Link>
-              );
-            })}
+                        return (
+                          <Link
+                            key={key}
+                            href={href}
+                            className={isActive ? styles.navItemActive : styles.navItem}
+                            onClick={() => setSidebarOpen(false)}
+                          >
+                            <span className={styles.navIcon}>{icon}</span>
+                            {label}
+                          </Link>
+                        );
+                      })}
           <button
             className={styles.navItem}
             type="button"

@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import Swal from "sweetalert2";
 import styles from "../auth.module.css";
 import Navbar from "../components/Navbar";
+import { UserRole } from "../constants/common";
 
 const CODE_LENGTH = 6;
 const RESEND_BASE_DELAY_SECONDS = 30;
@@ -16,6 +18,7 @@ export default function OtpPage() {
   const [resendRemaining, setResendRemaining] = useState(RESEND_BASE_DELAY_SECONDS);
   const [resendAttempt, setResendAttempt] = useState(0);
   const [isResending, setIsResending] = useState(false);
+  const [isError,setIsError]=useState(false)
   const inputRefs = useRef([]);
   const router = useRouter();
 
@@ -55,6 +58,7 @@ export default function OtpPage() {
       ),
     );
     setMessage("");
+    setIsError(false)
 
     if (digit && index < CODE_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
@@ -72,6 +76,7 @@ export default function OtpPage() {
     event.preventDefault();
     setCode(Array.from({ length: CODE_LENGTH }, (_, index) => pastedCode[index] || ""));
     setMessage("");
+    setIsError(false)
     inputRefs.current[Math.min(pastedCode.length, CODE_LENGTH) - 1]?.focus();
   }
 
@@ -92,6 +97,7 @@ export default function OtpPage() {
   async function submitCode(event) {
     event.preventDefault();
     setMessage("");
+    setIsError(false)
 
     const email = window.sessionStorage.getItem("signupEmail");
     if (!email) {
@@ -117,6 +123,7 @@ export default function OtpPage() {
 
       if (!response.ok) {
         setMessage(result?.message || "Could not verify the code. Please try again.");
+        setIsError(true)
         return;
       }
 
@@ -124,9 +131,21 @@ export default function OtpPage() {
       window.sessionStorage.removeItem("otpResendAttempts");
       window.sessionStorage.removeItem("otpResendAvailableAt");
       
-      router.push("/profile-update");
+            // Show success modal and redirect to signin on OK click
+            await Swal.fire({
+              icon: "success",
+              title: "Email Verified!",
+              text: "Your email has been successfully verified.",
+              confirmButtonText: "OK",
+              confirmButtonColor: "#3085d6",
+            });
+            if(result?.data.type==UserRole.PARTNER)
+              router.push("/signin");
+            else
+              router.push('/profile-update')
     } catch {
       setMessage("Could not connect to the server. Please try again.");
+      setIsError(true)
     }
   }
 
@@ -152,6 +171,7 @@ export default function OtpPage() {
     setResendRemaining(delaySeconds);
     setIsResending(true);
     setMessage("");
+    setIsError(false)
 
     try {
       const response = await fetch(
@@ -227,14 +247,21 @@ export default function OtpPage() {
               ))}
             </div>
 
-            <p className={styles.otpHint} aria-live="polite">
-              {message || "The code is valid for 10 minutes."}
-            </p>
+                      {message && (
+                        <p className={isError ? styles.formError : styles.otpHint} aria-live="polite">
+                          {message}
+                        </p>
+                      )}
+                      {!message && (
+                        <p className={styles.otpHint} aria-live="polite">
+                          The code is valid for 10 minutes.
+                        </p>
+                      )}
 
-            <button className={styles.submit} type="submit">
-              Verify email
-            </button>
-          </form>
+                      <button className={styles.submit} type="submit">
+                        Verify email
+                      </button>
+                    </form>
 
           <p className={styles.otpResend}>
             Didn&apos;t receive a code?{" "}

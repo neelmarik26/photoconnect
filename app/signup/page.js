@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "../auth.module.css";
 import Navbar from "../components/Navbar";
+import Modal from "../components/Modal";
 
 export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -12,7 +13,63 @@ export default function SignUpPage() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userType, setUserType] = useState("");
+  const [showDisclaimerModal, setShowDisclaimerModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingUserType, setPendingUserType] = useState("");
   const router = useRouter();
+
+  const userTypeOptions = [
+    { value: "PHOTOGRAPHER", label: "Become a Photographer" },
+    { value: "PARTNER", label: "Book a Photographer" },
+  ];
+
+  const disclaimerMessages = {
+    PHOTOGRAPHER: "By registering as a Photographer, you agree to showcase your portfolio, accept bookings, and adhere to our platform's quality standards and commission terms.",
+    PARTNER: "By registering to Book a Photographer, you agree to our booking terms, cancellation policy, and payment terms for hiring photographers through our platform.",
+  };
+
+  function handleUserTypeChange(event) {
+    const selectedValue = event.target.value;
+    setPendingUserType(selectedValue);
+    setShowDisclaimerModal(true);
+  }
+
+  function handleDisclaimerAccept() {
+    setUserType(pendingUserType);
+    setShowDisclaimerModal(false);
+  }
+
+  function handleDisclaimerDecline() {
+    setPendingUserType("");
+    setShowDisclaimerModal(false);
+    // Reset the select to empty
+    const selectElement = document.querySelector('select[name="userType"]');
+    if (selectElement) {
+      selectElement.value = "";
+    }
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+    if (isSubmitting) return;
+
+    if (!userType) {
+      setErrorMessage("Please select an account type before signing up.");
+      return;
+    }
+
+    setShowConfirmModal(true);
+  }
+
+  function handleConfirmSubmit() {
+    setShowConfirmModal(false);
+      // The form will be submitted via the onSubmit handler
+      const form = document.querySelector('form');
+      if (form) {
+        form.requestSubmit();
+      }
+    }
 
   async function submitForm(event) {
     event.preventDefault();
@@ -59,33 +116,34 @@ export default function SignUpPage() {
         name: formData.get("fullName"),
         email: formData.get("email"),
         password,
-      };
-      // console.log(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/signup`);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/signup`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(signupPayload),
-      });
+        type: userType,
+        };
+        // console.log(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/signup`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/signup`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(signupPayload),
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
-        setErrorMessage(errorData?.message || "Failed to create your account. Please try again.");
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          setErrorMessage(errorData?.message || "Failed to create your account. Please try again.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        window.sessionStorage.setItem("signupEmail", formData.get("email"));
+        window.sessionStorage.setItem("signupPayload", JSON.stringify(signupPayload));
+        window.sessionStorage.removeItem("otpResendAttempts");
+        window.sessionStorage.removeItem("otpResendAvailableAt");
+        router.push("/otp");
+      } catch {
+        setErrorMessage("Could not connect to the server. Please try again.");
         setIsSubmitting(false);
-        return;
       }
-
-      window.sessionStorage.setItem("signupEmail", formData.get("email"));
-      window.sessionStorage.setItem("signupPayload", JSON.stringify(signupPayload));
-      window.sessionStorage.removeItem("otpResendAttempts");
-      window.sessionStorage.removeItem("otpResendAvailableAt");
-      router.push("/otp");
-    } catch {
-      setErrorMessage("Could not connect to the server. Please try again.");
-      setIsSubmitting(false);
     }
-  }
 
   return (
     <main className={styles.page}>
@@ -192,7 +250,29 @@ export default function SignUpPage() {
               </span>
               {fieldErrors.confirmPassword && <span className={styles.fieldError} id="confirmPassword-error">{fieldErrors.confirmPassword}</span>}
             </label>
-            {errorMessage && (
+                        <label className={styles.field}>
+                          Account Type
+                          <select
+                            name="userType"
+                            className={styles.typeSelect}
+                            value={userType}
+                            onChange={handleUserTypeChange}
+                            required
+                            aria-invalid={!userType && Boolean(fieldErrors.userType)}
+                            aria-describedby={!userType && fieldErrors.userType ? "userType-error" : undefined}
+                          >
+                            <option value="" disabled>
+                              Select account type
+                            </option>
+                            {userTypeOptions.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                          {!userType && fieldErrors.userType && <span className={styles.fieldError} id="userType-error">{fieldErrors.userType}</span>}
+                        </label>
+                        {errorMessage && (
               <p className={styles.formError} role="alert">
                 <svg viewBox="0 0 20 20" aria-hidden="true">
                   <circle cx="10" cy="10" r="8" />
@@ -211,6 +291,29 @@ export default function SignUpPage() {
           </p>
         </div>
       </section>
-    </main>
-  );
-}
+                <Modal
+                  isOpen={showDisclaimerModal}
+                  onClose={handleDisclaimerDecline}
+                  title="Important Disclaimer"
+                  confirmText="I Agree"
+                  onConfirm={handleDisclaimerAccept}
+                  cancelText="Decline"
+                >
+                  <p>{disclaimerMessages[pendingUserType]}</p>
+                </Modal>
+                <Modal
+                  isOpen={showConfirmModal}
+                  onClose={() => setShowConfirmModal(false)}
+                  title="Confirm Registration"
+                  confirmText="Confirm & Sign Up"
+                  onConfirm={handleConfirmSubmit}
+                  cancelText="Go Back"
+                >
+                  <p>
+                    You are registering as <strong>{userTypeOptions.find((opt) => opt.value === userType)?.label || userType}</strong>.
+                    Please confirm to proceed with account creation.
+                  </p>
+                </Modal>
+              </main>
+            );
+          }

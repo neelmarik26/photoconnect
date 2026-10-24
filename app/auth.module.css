@@ -440,9 +440,11 @@
 }
 .typeSelect {
   appearance: none;
-  padding-right: 40px !important;
-  border-color: #c9d9dd !important;
-  background-color: #f7faf9 !important;
+  width: 100%;
+  padding: 11px 40px 11px 12px;
+  border: 1px solid #d4e0e6;
+  border-radius: 4px;
+  background-color: #fff;
   background-image:
     linear-gradient(45deg, transparent 50%, #58727a 50%),
     linear-gradient(135deg, #58727a 50%, transparent 50%);
@@ -451,23 +453,24 @@
     calc(100% - 12px) 50%;
   background-repeat: no-repeat;
   background-size: 5px 5px;
-  color: #183640 !important;
-  font-weight: 600 !important;
+  color: #263b4a;
+  font: inherit;
+  font-size: 11px;
+  outline-color: #1878f2;
   cursor: pointer;
   transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
 }
 .typeSelect:hover {
-  border-color: #91aaaf !important;
+  border-color: #91aaaf;
 }
 .typeSelect:focus-visible {
-  border-color: #16806c !important;
-  outline: 3px solid rgb(22 128 108 / 16%);
+  border-color: #1878f2;
+  outline: 3px solid rgb(24 120 242 / 16%);
   outline-offset: 1px;
-  background-color: #fff !important;
 }
 .typeSelect:invalid {
-  color: #758591 !important;
-  font-weight: normal !important;
+  color: #758591;
+  font-weight: normal;
 }
 .profileUpload {
   display: grid;

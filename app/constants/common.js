@@ -1,0 +1,6 @@
+export const UserRole= {
+  ADMIN : 'ADMIN',
+  PHOTOGRAPHER :'PHOTOGRAPHER',
+  PARTNER : 'PARTNER',
+  SUPERADMIN : 'SUPERADMIN',
+}

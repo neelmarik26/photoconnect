@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import styles from "../auth.module.css";
 import Navbar from "../components/Navbar";
+import { COUNTRY_OPTIONS, STATE_OPTIONS, WEST_BENGAL_DISTRICTS, WEST_BENGAL_CITIES_BY_DISTRICT } from "../constants/location";
 
 export default function ProfileDetailsPage() {
   const router = useRouter();
@@ -14,6 +15,8 @@ export default function ProfileDetailsPage() {
   const [phone, setPhone] = useState("");
   const [selectedFileName, setSelectedFileName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+    const [district, setDistrict] = useState("");
+    const [city, setCity] = useState("");
 
   async function submitDetails(event) {
     event.preventDefault();
@@ -27,10 +30,11 @@ export default function ProfileDetailsPage() {
       ["phone", "phone number"],
       ["country", "country"],
       ["state", "state"],
-      ["city", "city"],
-      ["address1", "address 1"],
-      ["file", "profile image"],
-    ];
+          ["district", "district"],
+          ["city", "city"],
+          ["address1", "address 1"],
+          ["file", "profile image"],
+        ];
 
     for (const [fieldName, label] of requiredFields) {
       const value = formData.get(fieldName);
@@ -176,49 +180,99 @@ export default function ProfileDetailsPage() {
               <div>
                 Country <span aria-hidden="true">*</span>
               </div>
-              <input
-                name="country"
-                type="text"
-                required
-                placeholder="Enter your country"
-                aria-invalid={Boolean(fieldErrors.country)}
-                aria-describedby={fieldErrors.country ? "country-error" : undefined}
-                onChange={() => setFieldErrors((errors) => ({ ...errors, country: "" }))}
-              />
-              {fieldErrors.country && <span className={styles.fieldError} id="country-error">{fieldErrors.country}</span>}
-            </label>
+                          <input type="hidden" name="country" value="india" />
+                                      <select
+                            name="country_display"
+                                        required
+                                        disabled
+                                        defaultValue="india"
+                            aria-invalid={Boolean(fieldErrors.country)}
+                            aria-describedby={fieldErrors.country ? "country-error" : undefined}
+                            onChange={() => setFieldErrors((errors) => ({ ...errors, country: "" }))}
+                                      >
+                                        {COUNTRY_OPTIONS.map((option) => (
+                                          <option key={option.value} value={option.value}>
+                                            {option.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      {fieldErrors.country && <span className={styles.fieldError} id="country-error">{fieldErrors.country}</span>}
+                                    </label>
 
-            <label className={styles.field}>
-              <div>
-                State <span aria-hidden="true">*</span>
-              </div>
-              <input
-                name="state"
-                type="text"
-                required
-                placeholder="Enter your state"
-                aria-invalid={Boolean(fieldErrors.state)}
-                aria-describedby={fieldErrors.state ? "state-error" : undefined}
-                onChange={() => setFieldErrors((errors) => ({ ...errors, state: "" }))}
-              />
-              {fieldErrors.state && <span className={styles.fieldError} id="state-error">{fieldErrors.state}</span>}
-            </label>
+                                    <label className={styles.field}>
+                                      <div>
+                                        State <span aria-hidden="true">*</span>
+                                      </div>
+                          <input type="hidden" name="state" value="west_bengal" />
+                                      <select
+                                        name="state_display"
+                                        required
+                                        disabled
+                                        defaultValue="west_bengal"
+                                        aria-invalid={Boolean(fieldErrors.state)}
+                                        aria-describedby={fieldErrors.state ? "state-error" : undefined}
+                                        onChange={() => setFieldErrors((errors) => ({ ...errors, state: "" }))}
+                                      >
+                                        {STATE_OPTIONS.map((option) => (
+                                          <option key={option.value} value={option.value}>
+                                            {option.label}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      {fieldErrors.state && <span className={styles.fieldError} id="state-error">{fieldErrors.state}</span>}
+                                    </label>
 
-            <label className={styles.field}>
-              <div>
-                City <span aria-hidden="true">*</span>
-              </div>
-              <input
-                name="city"
-                type="text"
-                required
-                placeholder="Enter your city"
-                aria-invalid={Boolean(fieldErrors.city)}
-                aria-describedby={fieldErrors.city ? "city-error" : undefined}
-                onChange={() => setFieldErrors((errors) => ({ ...errors, city: "" }))}
-              />
-              {fieldErrors.city && <span className={styles.fieldError} id="city-error">{fieldErrors.city}</span>}
-            </label>
+                        <label className={styles.field}>
+                          <div>
+                            District <span aria-hidden="true">*</span>
+                          </div>
+                          <select
+                            name="district"
+                            required
+                            value={district}
+                            onChange={(e) => {
+                              setDistrict(e.target.value);
+                              setCity("");
+                              setFieldErrors((errors) => ({ ...errors, district: "" }));
+                            }}
+                            aria-invalid={Boolean(fieldErrors.district)}
+                            aria-describedby={fieldErrors.district ? "district-error" : undefined}
+                          >
+                            <option value="">Select District</option>
+                            {WEST_BENGAL_DISTRICTS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                          {fieldErrors.district && <span className={styles.fieldError} id="district-error">{fieldErrors.district}</span>}
+                        </label>
+
+                        <label className={styles.field}>
+                          <div>
+                            City <span aria-hidden="true">*</span>
+                          </div>
+                          <select
+                            name="city"
+                            required
+                            value={city}
+                            onChange={(e) => {
+                              setCity(e.target.value);
+                              setFieldErrors((errors) => ({ ...errors, city: "" }));
+                            }}
+                            aria-invalid={Boolean(fieldErrors.city)}
+                            aria-describedby={fieldErrors.city ? "city-error" : undefined}
+                            disabled={!district}
+                          >
+                            <option value="">Select City</option>
+                            {district && WEST_BENGAL_CITIES_BY_DISTRICT[district]?.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                          {fieldErrors.city && <span className={styles.fieldError} id="city-error">{fieldErrors.city}</span>}
+                        </label>
 
             <label className={styles.field}>
               <div>

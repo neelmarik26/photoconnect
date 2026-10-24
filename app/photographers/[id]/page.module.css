@@ -360,6 +360,279 @@
   text-align: right;
 }
 
+.bookButton {
+  margin-top: 12px;
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 6px;
+  background: #1878f2;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+}
+
+.bookButton:hover {
+  background: #1468d6;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 36, 48, 0.6);
+  animation: modalFadeIn 160ms ease;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal {
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 20px 50px rgb(15 36 48 / 25%);
+  animation: modalSlideUp 200ms ease;
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e7eb;
+}
+
+.modalHeader h3 {
+  margin: 0;
+  color: #172b3b;
+  font-size: 18px;
+}
+
+.modalClose {
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #647789;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modalClose:hover {
+  background: #f0f4f6;
+  color: #172b3b;
+}
+
+.modalForm {
+  padding: 24px;
+  display: grid;
+  gap: 18px;
+}
+
+.modalError {
+  padding: 12px 16px;
+  border-radius: 6px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 12px;
+}
+
+.modalSuccess {
+  padding: 12px 16px;
+  border-radius: 6px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 12px;
+}
+
+.modalField {
+  display: grid;
+  gap: 6px;
+}
+
+.modalField label {
+  color: #263b4a;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.modalField input,
+.modalField textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d9de;
+  border-radius: 6px;
+  color: #102533;
+  font: inherit;
+  font-size: 13px;
+  background: #fff;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.modalField input:focus,
+.modalField textarea:focus {
+  outline: none;
+  border-color: #1878f2;
+  box-shadow: 0 0 0 3px #1878f233;
+}
+
+.modalField small {
+  color: #7a8a9a;
+  font-size: 10px;
+}
+
+.dateInputs {
+  display: grid;
+  gap: 8px;
+}
+
+.dateInputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dateInputRow input {
+  flex: 1;
+}
+
+.removeDateBtn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d1d9de;
+  border-radius: 6px;
+  background: #fff;
+  color: #a44d45;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.removeDateBtn:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.addDateBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px dashed #d1d9de;
+  border-radius: 6px;
+  background: #f8fafb;
+  color: #1878f2;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.addDateBtn:hover {
+  background: #eef4ff;
+  border-color: #1878f2;
+}
+
+.modalErrorInline {
+  display: block;
+  margin-top: 6px;
+  color: #b91c1c;
+  font-size: 11px;
+}
+
+.selectedDates {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f0f4ff;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.selectedDates p {
+  margin: 0 0 6px;
+  color: #174b9a;
+  font-weight: 600;
+}
+
+.selectedDates ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #263b4a;
+}
+
+.selectedDates li {
+  margin: 2px 0;
+}
+
+.stateMessage,
+.errorCard {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.modalCancel {
+  padding: 10px 20px;
+  border: 1px solid #d1d9de;
+  border-radius: 6px;
+  background: #fff;
+  color: #405567;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modalCancel:hover:not(:disabled) {
+  border-color: #1878f2;
+  color: #1878f2;
+}
+
+.modalSubmit {
+  padding: 10px 20px;
+  border: 0;
+  border-radius: 6px;
+  background: #1878f2;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modalSubmit:hover:not(:disabled) {
+  background: #1468d6;
+}
+
+.modalCancel:disabled,
+.modalSubmit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .stateMessage,
 .errorCard {
   margin-top: 24px;

@@ -6,6 +6,7 @@ import styles from "./page.module.css";
 import Navbar from "./components/Navbar";
 import PhotographerCard from "./components/PhotographerCard";
 import Footer from "./components/Footer";
+import { WEST_BENGAL_DISTRICTS, WEST_BENGAL_CITIES_BY_DISTRICT } from "./constants/location";
 
 const defaultProfileImage = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/defolt_profile_pic.jpg`;
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -31,6 +32,9 @@ function mapPhotographer(user) {
   return {
     ...user,
     id: user._id,
+    city: user.city,
+    state: user.state,
+    country: user.country,
     location: [user.city, user.state, user.country].filter(Boolean).join(", ") || "Location not provided",
     rating: Number(user.rating) || 0,
     reviews: Number(user.totalReviews) || 0,
@@ -49,7 +53,10 @@ export default function Home() {
   const [photographersLoading, setPhotographersLoading] = useState(true);
   const [photographersError, setPhotographersError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [heroConfig, setHeroConfig] = useState({
+    const [selectedDistrict, setSelectedDistrict] = useState("");
+    const [selectedCity, setSelectedCity] = useState("");
+    const [allPhotographers, setAllPhotographers] = useState([]);
+    const [heroConfig, setHeroConfig] = useState({
     images: [],
     title: "Find the Perfect\nPhotographer for Your Event",
     description: "Talented. Trusted. Available.",
@@ -195,24 +202,26 @@ export default function Home() {
       .then((result) => {
         if (isCurrent) {
           const users = Array.isArray(result?.data) ? result.data : [];
-          setPhotographers(
-            users.filter((user) => user.status === "active").map(mapPhotographer),
-          );
-        }
-      })
-      .catch((error) => {
-        if (isCurrent) {
-          setPhotographersError(error.message || "Could not load photographers.");
-        }
-      })
-      .finally(() => {
-        if (isCurrent) setPhotographersLoading(false);
-      });
+            const mappedPhotographers = users
+              .filter((user) => user.status === "active")
+              .map(mapPhotographer);
+            setAllPhotographers(mappedPhotographers);
+            setPhotographers(mappedPhotographers);
+          }
+        })
+        .catch((error) => {
+          if (isCurrent) {
+            setPhotographersError(error.message || "Could not load photographers.");
+          }
+        })
+        .finally(() => {
+          if (isCurrent) setPhotographersLoading(false);
+        });
 
-    return () => {
-      isCurrent = false;
-    };
-  }, []);
+      return () => {
+        isCurrent = false;
+      };
+    }, []);
 
   function handleHeroPointerDown(event) {
     swipeStartX.current = null;
@@ -246,6 +255,52 @@ export default function Home() {
     setSearchTerm(value);
     console.log("Search input:", value);
   };
+
+    const handleDistrictChange = (e) => {
+      const value = e.target.value;
+      setSelectedDistrict(value);
+      setSelectedCity(""); // Reset city when district changes
+    };
+
+    const handleCityChange = (e) => {
+      const value = e.target.value;
+      setSelectedCity(value);
+    };
+
+    // Filter photographers based on search term, district, and city
+    useEffect(() => {
+      let filtered = allPhotographers;
+
+      // Filter by search term
+      if (searchTerm.trim()) {
+        const term = searchTerm.toLowerCase().trim();
+        filtered = filtered.filter(
+          (p) =>
+            p.name.toLowerCase().includes(term) ||
+            p.location.toLowerCase().includes(term) ||
+            p.tags.some((tag) => tag.toLowerCase().includes(term))
+        );
+      }
+
+      // Filter by district
+      if (selectedDistrict) {
+        filtered = filtered.filter((p) => {
+          // Check if the photographer's city is in the selected district
+          const citiesInDistrict = WEST_BENGAL_CITIES_BY_DISTRICT[selectedDistrict] || [];
+          const cityValues = citiesInDistrict.map((c) => c.value);
+          return cityValues.includes(p.city?.toLowerCase().replace(/\s+/g, "_"));
+        });
+      }
+
+      // Filter by city
+      if (selectedCity) {
+        filtered = filtered.filter((p) =>
+          p.city?.toLowerCase().replace(/\s+/g, "_") === selectedCity
+        );
+      }
+
+      setPhotographers(filtered);
+    }, [searchTerm, selectedDistrict, selectedCity, allPhotographers]);
 
   return (
     <main id="home" className={styles.page}>
@@ -419,6 +474,35 @@ export default function Home() {
               onChange={handleSearchChange}
               aria-label="Search photographers"
             />
+          </div>
+          <div className={styles.filterDropdowns}>
+            <select
+              value={selectedDistrict}
+              onChange={handleDistrictChange}
+              aria-label="Filter by district"
+              className={styles.filterSelect}
+            >
+              <option value="">All Districts</option>
+              {WEST_BENGAL_DISTRICTS.map((district) => (
+                <option key={district.value} value={district.value}>
+                  {district.label}
+                </option>
+              ))}
+            </select>
+            <select
+              value={selectedCity}
+              onChange={handleCityChange}
+              aria-label="Filter by city"
+              className={styles.filterSelect}
+              disabled={!selectedDistrict}
+            >
+              <option value="">All Cities</option>
+              {selectedDistrict && WEST_BENGAL_CITIES_BY_DISTRICT[selectedDistrict]?.map((city) => (
+                <option key={city.value} value={city.value}>
+                  {city.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 

@@ -12,6 +12,16 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const savedUserKey = "photoConnectUser";
 const maxSamplePhotos = 5;
 const maxSamplePhotoSize = 5 * 1024 * 1024;
+const maxProfileVideoSize = 15 * 1024 * 1024;
+const maxProfileVideos = 2;
+const allowedProfileVideoTypes = [
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/x-msvideo",
+  "video/ogg",
+  "video/x-matroska",
+];
 
 const editableSections = [
   {
@@ -41,7 +51,6 @@ const editableSections = [
       ["experienceYears", "Experience (years)", "number"],
       ["dob", "Date of birth", "date"],
       ["age", "Age", "computed"],
-      ["portfolioUrl", "Portfolio", "url"],
       ["bio", "Bio", "textarea"],
       ["about", "About", "textarea"],
     ],
@@ -79,7 +88,6 @@ const profileSections = [
       ["age", "Age"],
       ["bio", "Bio"],
       ["about", "About"],
-      ["portfolioUrl", "Portfolio"],
       ["rating", "Rating"],
       ["totalReviews", "Total reviews"],
     ],
@@ -123,9 +131,6 @@ function formatValue(field, value) {
   }
   if (field === "age") {
     return `${value} years`;
-  }
-  if (field === "portfolioUrl") {
-    return String(value);
   }
   return String(value);
 }
@@ -187,6 +192,18 @@ function getGalleryImageUrl(path) {
   return `${process.env.NEXT_PUBLIC_BACKEND_URL}${path}`;
 }
 
+function getProfileVideos(profile, videoRecords = []) {
+  const legacyUrls = Array.isArray(profile.profileVideoUrls)
+    ? profile.profileVideoUrls
+    : profile.profileVideoUrl
+      ? [profile.profileVideoUrl]
+      : [];
+  return Array.from({ length: maxProfileVideos }, (_, slot) => {
+    const record = videoRecords.find((video) => video.slot === slot);
+    return record?.videoUrl || legacyUrls[slot] || "";
+  });
+}
+
 export default function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState(null);
@@ -199,8 +216,17 @@ export default function ProfilePage() {
   const [saveMessageIsError, setSaveMessageIsError] = useState(false);
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [selectedImagePreview, setSelectedImagePreview] = useState("");
+  const [clearProfileImage, setClearProfileImage] = useState(false);
+  const [selectedVideoFiles, setSelectedVideoFiles] = useState(() =>
+    Array(maxProfileVideos).fill(null),
+  );
+  const [selectedVideoPreviews, setSelectedVideoPreviews] = useState(() =>
+    Array(maxProfileVideos).fill(""),
+  );
   const imageInputRef = useRef(null);
+  const videoInputRefs = useRef([]);
   const imagePreviewUrlRef = useRef("");
+  const videoPreviewUrlsRef = useRef(Array(maxProfileVideos).fill(""));
   const [dobValue, setDobValue] = useState("");
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date();
@@ -219,19 +245,19 @@ export default function ProfilePage() {
   const [availabilityMessageIsError, setAvailabilityMessageIsError] =
     useState(false);
   const [galleryPhotos, setGalleryPhotos] = useState([]);
+  const [profileVideos, setProfileVideos] = useState([]);
   const [galleryLoading, setGalleryLoading] = useState(true);
   const [sampleFiles, setSampleFiles] = useState(() =>
     Array(maxSamplePhotos).fill(null),
   );
+  const [deletedSamplePhotoIds, setDeletedSamplePhotoIds] = useState([]);
+  const [deletedVideoSlots, setDeletedVideoSlots] = useState([]);
   const [samplePreviewUrls, setSamplePreviewUrls] = useState(() =>
     Array(maxSamplePhotos).fill(""),
   );
   const samplePreviewUrlsRef = useRef(Array(maxSamplePhotos).fill(""));
   const sampleFileInputRefs = useRef([]);
   const [galleryLoadFailed, setGalleryLoadFailed] = useState(false);
-  const [isSavingSamples, setIsSavingSamples] = useState(false);
-  const [sampleMessage, setSampleMessage] = useState("");
-  const [sampleMessageIsError, setSampleMessageIsError] = useState(false);
 
   useEffect(() => {
     const rawProfile = window.localStorage.getItem(savedUserKey);
@@ -302,19 +328,48 @@ export default function ProfilePage() {
         setGalleryPhotos(
           photos
             .filter((photo) => !photo.isProfileImage && photo.link)
-            .sort((first, second) => first.sequence - second.sequence)
-            .slice(0, maxSamplePhotos),
+            .sort((first, second) => first.sequence - second.sequence),
         );
       })
       .catch((error) => {
         if (isCurrent) {
           setGalleryLoadFailed(true);
-          setSampleMessage(error.message || "Could not load sample photos.");
-          setSampleMessageIsError(true);
+          setSaveMessage(error.message || "Could not load sample photos.");
+          setSaveMessageIsError(true);
         }
       })
       .finally(() => {
         if (isCurrent) setGalleryLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [photographerId, isPhotographer]);
+
+  useEffect(() => {
+    if (!photographerId || !isPhotographer) return;
+    let isCurrent = true;
+    fetch(
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/${encodeURIComponent(photographerId)}/profile-videos`,
+    )
+      .then(async (response) => {
+        const result = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(result?.message || "Could not load profile videos.");
+        }
+        return result;
+      })
+      .then((result) => {
+        if (isCurrent) {
+          setProfileVideos(Array.isArray(result) ? result : result?.data ?? []);
+        }
+      })
+      .catch((error) => {
+        if (isCurrent) {
+          setSaveMessage(error.message || "Could not load profile videos.");
+          setSaveMessageIsError(true);
+        }
       });
 
     return () => {
@@ -347,6 +402,9 @@ export default function ProfilePage() {
       if (imagePreviewUrlRef.current) {
         URL.revokeObjectURL(imagePreviewUrlRef.current);
       }
+      videoPreviewUrlsRef.current.forEach((previewUrl) => {
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+      });
       samplePreviewUrlsRef.current.forEach((previewUrl) => {
         if (previewUrl) URL.revokeObjectURL(previewUrl);
       });
@@ -413,6 +471,20 @@ export default function ProfilePage() {
     setSelectedImagePreview(previewUrl);
   }
 
+  function updateSelectedVideo(index, file) {
+    const nextPreviewUrls = [...videoPreviewUrlsRef.current];
+    if (nextPreviewUrls[index]) URL.revokeObjectURL(nextPreviewUrls[index]);
+    const previewUrl = file ? URL.createObjectURL(file) : "";
+    nextPreviewUrls[index] = previewUrl;
+    videoPreviewUrlsRef.current = nextPreviewUrls;
+    setSelectedVideoFiles((files) =>
+      files.map((currentFile, fileIndex) =>
+        fileIndex === index ? file : currentFile,
+      ),
+    );
+    setSelectedVideoPreviews(nextPreviewUrls);
+  }
+
   function updateSampleFile(index, file) {
     const nextPreviewUrls = [...samplePreviewUrlsRef.current];
     const previousUrl = nextPreviewUrls[index];
@@ -439,11 +511,32 @@ export default function ProfilePage() {
     setSampleFiles(Array(maxSamplePhotos).fill(null));
   }
 
+  function cancelProfileEdit() {
+    updateSelectedImage(null);
+    setClearProfileImage(false);
+    selectedVideoFiles.forEach((_, index) => updateSelectedVideo(index, null));
+    setDeletedSamplePhotoIds([]);
+    setDeletedVideoSlots([]);
+    if (imageInputRef.current) imageInputRef.current.value = "";
+    videoInputRefs.current.forEach((input) => {
+      if (input) input.value = "";
+    });
+    clearSampleFiles();
+    setIsCalendarOpen(false);
+    setSaveMessage("");
+    setIsEditing(false);
+  }
+
   async function submitProfile(event) {
     event.preventDefault();
     setSaveMessage("");
     const formData = new FormData(event.currentTarget);
     const imageFile = formData.get("file");
+    const videoFiles = selectedVideoFiles;
+    const videoSlotsToDelete = deletedVideoSlots;
+    const shouldClearProfileImage = clearProfileImage;
+    const hasSampleChanges =
+      sampleFiles.some(Boolean) || deletedSamplePhotoIds.length > 0;
     if (imageFile?.size && !imageFile.type.startsWith("image/")) {
       setSaveMessage("Choose an image file.");
       setSaveMessageIsError(true);
@@ -451,6 +544,36 @@ export default function ProfilePage() {
     }
     if (imageFile?.size > 5 * 1024 * 1024) {
       setSaveMessage("Image must be 5 MB or smaller.");
+      setSaveMessageIsError(true);
+      return;
+    }
+    for (const videoFile of videoFiles) {
+      if (videoFile && !allowedProfileVideoTypes.includes(videoFile.type)) {
+        setSaveMessage("Choose an MP4, WebM, MOV, AVI, OGG, or MKV video.");
+        setSaveMessageIsError(true);
+        return;
+      }
+      if (videoFile?.size > maxProfileVideoSize) {
+        setSaveMessage("Each video must be 15 MB or smaller.");
+        setSaveMessageIsError(true);
+        return;
+      }
+    }
+    if (
+      sampleFiles.some(
+        (file) =>
+          file &&
+          (!file.type.startsWith("image/") || file.size > maxSamplePhotoSize),
+      )
+    ) {
+      setSaveMessage("Choose portfolio images no larger than 5 MB each.");
+      setSaveMessageIsError(true);
+      return;
+    }
+    if (hasSampleChanges && galleryLoadFailed) {
+      setSaveMessage(
+        "Could not load your saved photos. Reload this page before editing them.",
+      );
       setSaveMessageIsError(true);
       return;
     }
@@ -474,7 +597,6 @@ export default function ProfilePage() {
         .filter(Boolean),
       experienceYears: experienceYears ? Number(experienceYears) : null,
       dob: value("dob") || null,
-      portfolioUrl: value("portfolioUrl"),
       bio: value("bio"),
       about: value("about"),
     };
@@ -508,17 +630,20 @@ export default function ProfilePage() {
       }),
     );
 
-    if (Object.keys(payload).length === 0 && !imageFile?.size) {
+    if (
+      Object.keys(payload).length === 0 &&
+      !imageFile?.size &&
+      !shouldClearProfileImage &&
+      videoFiles.every((file) => !file) &&
+      videoSlotsToDelete.length === 0 &&
+      !hasSampleChanges
+    ) {
       setSaveMessage("There are no changes to save.");
       setSaveMessageIsError(false);
       return;
     }
-    if (!Object.hasOwn(payload, "dob")) {
-      payload.dob = nextValues.dob;
-    }
-
     setIsSaving(true);
-    let detailsSaved = false;
+    const savedProfileParts = [];
     try {
       const userId = encodeURIComponent(profile._id);
       const updateProfile = async (url, options) => {
@@ -539,12 +664,29 @@ export default function ProfilePage() {
             body: JSON.stringify(payload),
           },
         );
-        detailsSaved = true;
+        savedProfileParts.push("Profile details");
         setProfile(updatedUser);
         syncSavedUser(updatedUser);
       }
 
       if (imageFile?.size) {
+        if (shouldClearProfileImage) {
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/${userId}/profile-picture`,
+            { method: "DELETE" },
+          );
+          const result = await response.json().catch(() => null);
+          if (!response.ok) {
+            throw new Error(result?.message || "Could not clear profile image.");
+          }
+          updatedUser = { ...updatedUser, profileImageUrl: "" };
+          setProfile(updatedUser);
+          syncSavedUser(updatedUser);
+          setClearProfileImage(false);
+          if (!savedProfileParts.includes("Profile image")) {
+            savedProfileParts.push("Profile image");
+          }
+        }
         const imageData = new FormData();
         imageData.append("file", imageFile);
         const updatedWithImage = await updateProfile(
@@ -554,99 +696,139 @@ export default function ProfilePage() {
         updatedUser = updatedWithImage;
         setProfile(updatedUser);
         syncSavedUser(updatedUser);
+        savedProfileParts.push("Profile image");
+      }
+      if (shouldClearProfileImage && !imageFile?.size) {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/${userId}/profile-picture`,
+          { method: "DELETE" },
+        );
+        const result = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(result?.message || "Could not clear profile image.");
+        }
+        updatedUser = { ...updatedUser, profileImageUrl: "" };
+        setProfile(updatedUser);
+        syncSavedUser(updatedUser);
+        setClearProfileImage(false);
+        if (!savedProfileParts.includes("Profile image")) {
+          savedProfileParts.push("Profile image");
+        }
       }
 
+      for (const slot of videoSlotsToDelete) {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/${userId}/profile-videos/${slot}`,
+          { method: "DELETE" },
+        );
+        const result = await response.json().catch(() => null);
+        if (!response.ok) {
+          throw new Error(result?.message || `Could not clear profile video ${slot + 1}.`);
+        }
+        setProfileVideos((videos) => videos.filter((video) => video.slot !== slot));
+        const legacyUrls = Array.isArray(updatedUser.profileVideoUrls)
+          ? [...updatedUser.profileVideoUrls]
+          : [];
+        legacyUrls[slot] = "";
+        updatedUser = {
+          ...updatedUser,
+          profileVideoUrls: legacyUrls,
+          ...(slot === 0 ? { profileVideoUrl: "" } : {}),
+        };
+        setProfile(updatedUser);
+        syncSavedUser(updatedUser);
+        setDeletedVideoSlots((slots) => slots.filter((current) => current !== slot));
+        savedProfileParts.push(`Profile video ${slot + 1}`);
+      }
+
+      for (const [slot, videoFile] of videoFiles.entries()) {
+        if (!videoFile) continue;
+        const videoData = new FormData();
+        videoData.append("file", videoFile);
+        const savedVideo = await updateProfile(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/${userId}/profile-videos/${slot}`,
+          { method: "PATCH", body: videoData },
+        );
+        setProfileVideos((videos) => [
+          ...videos.filter((video) => video.slot !== slot),
+          savedVideo,
+        ]);
+        savedProfileParts.push(`Profile video ${slot + 1}`);
+      }
+
+      if (hasSampleChanges) {
+        const updatedPhotos = [...galleryPhotos];
+        let deletedPhotoCount = 0;
+        let savedPhotoCount = 0;
+        for (const photoId of deletedSamplePhotoIds) {
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/photo-galleries/${encodeURIComponent(photoId)}`,
+            { method: "DELETE" },
+          );
+          const result = await response.json().catch(() => null);
+          if (!response.ok) {
+            throw new Error(result?.message || "Could not clear a saved portfolio photo.");
+          }
+          const photoIndex = updatedPhotos.findIndex((photo) => photo._id === photoId);
+          if (photoIndex !== -1) updatedPhotos.splice(photoIndex, 1);
+          setGalleryPhotos([...updatedPhotos]);
+          setDeletedSamplePhotoIds((ids) => ids.filter((id) => id !== photoId));
+          deletedPhotoCount += 1;
+        }
+        if (deletedPhotoCount > 0) savedProfileParts.push("Portfolio photos");
+
+        for (let index = 0; index < sampleFiles.length; index += 1) {
+          const file = sampleFiles[index];
+          if (!file) continue;
+
+          const body = new FormData();
+          body.append("file", file);
+          body.append("userId", String(profile._id));
+          body.append("sequence", String(index + 1));
+          body.append("description", `Sample photo ${index + 1}`);
+          const existingPhoto = updatedPhotos[index];
+          const endpoint = existingPhoto
+            ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/photo-galleries/${encodeURIComponent(existingPhoto._id)}`
+            : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/photo-galleries`;
+          const photoResponse = await fetch(endpoint, {
+            method: existingPhoto ? "PATCH" : "POST",
+            body,
+          });
+          const photoResult = await photoResponse.json().catch(() => null);
+          if (!photoResponse.ok) {
+            throw new Error(
+              photoResult?.message || `Could not save sample photo ${index + 1}.`,
+            );
+          }
+          updatedPhotos[index] = photoResult?.data ?? photoResult;
+          setGalleryPhotos([...updatedPhotos]);
+          savedPhotoCount += 1;
+          if (savedPhotoCount === 1) savedProfileParts.push("Portfolio photos");
+        }
+        clearSampleFiles();
+        setDeletedSamplePhotoIds([]);
+      }
+
+      setDeletedVideoSlots([]);
       setIsEditing(false);
       updateSelectedImage(null);
+      setClearProfileImage(false);
+      videoFiles.forEach((_, index) => updateSelectedVideo(index, null));
+      videoInputRefs.current.forEach((input) => {
+        if (input) input.value = "";
+      });
       setIsCalendarOpen(false);
       setSaveMessage("Profile updated successfully.");
       setSaveMessageIsError(false);
     } catch (error) {
       setSaveMessage(
-        detailsSaved
-          ? `Your details were saved, but the profile image could not be updated: ${error.message}`
+        savedProfileParts.length
+          ? `${savedProfileParts.join(", ")} saved, but the remaining profile changes could not be saved: ${error.message}`
           : error.message || "Could not save your profile. Please try again.",
       );
       setSaveMessageIsError(true);
     } finally {
       setIsSaving(false);
-    }
-  }
-
-  async function saveSamplePhotos() {
-    setSampleMessage("");
-    if (galleryLoadFailed) {
-      setSampleMessage(
-        "Could not load your saved sample photos. Reload this page before editing them.",
-      );
-      setSampleMessageIsError(true);
-      return;
-    }
-    if (
-      sampleFiles.some(
-        (file) =>
-          file &&
-          (!file.type.startsWith("image/") || file.size > maxSamplePhotoSize),
-      )
-    ) {
-      setSampleMessage("Choose image files no larger than 5 MB each.");
-      setSampleMessageIsError(true);
-      return;
-    }
-    if (sampleFiles.every((file) => !file)) {
-      setSampleMessage(
-        galleryPhotos.length
-          ? "Choose at least one sample photo to update."
-          : "Choose at least one portfolio sample photo.",
-      );
-      setSampleMessageIsError(!galleryPhotos.length);
-      return;
-    }
-
-    setIsSavingSamples(true);
-    const updatedPhotos = [...galleryPhotos];
-    let uploadedCount = 0;
-    try {
-      for (let index = 0; index < sampleFiles.length; index += 1) {
-        const file = sampleFiles[index];
-        if (!file) continue;
-
-        const body = new FormData();
-        body.append("file", file);
-        body.append("userId", String(profile._id));
-        body.append("sequence", String(index + 1));
-        body.append("description", `Sample photo ${index + 1}`);
-        const existingPhoto = updatedPhotos[index];
-        const endpoint = existingPhoto
-          ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/photo-galleries/${encodeURIComponent(existingPhoto._id)}`
-          : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/photo-galleries`;
-        const response = await fetch(endpoint, {
-          method: existingPhoto ? "PATCH" : "POST",
-          body,
-        });
-        const result = await response.json().catch(() => null);
-        if (!response.ok) {
-          throw new Error(
-            result?.message || `Could not save sample photo ${index + 1}.`,
-          );
-        }
-        updatedPhotos[index] = result?.data ?? result;
-        uploadedCount += 1;
-        setGalleryPhotos([...updatedPhotos]);
-      }
-
-      clearSampleFiles();
-      setSampleMessage("Portfolio sample photos saved successfully.");
-      setSampleMessageIsError(false);
-    } catch (error) {
-      setSampleMessage(
-        uploadedCount
-          ? `${uploadedCount} photo${uploadedCount === 1 ? " was" : "s were"} saved. ${error.message} Select the remaining photos and save again.`
-          : error.message || "Could not save sample photos. Please try again.",
-      );
-      setSampleMessageIsError(true);
-    } finally {
-      setIsSavingSamples(false);
     }
   }
 
@@ -771,10 +953,12 @@ export default function ProfilePage() {
                     );
                     setIsCalendarOpen(false);
                   }
-                  setIsEditing((editing) => !editing);
-                  setSaveMessage("");
-                  updateSelectedImage(null);
-                  if (imageInputRef.current) imageInputRef.current.value = "";
+                  if (isEditing) {
+                    cancelProfileEdit();
+                  } else {
+                    setIsEditing(true);
+                    setSaveMessage("");
+                  }
                 }}
               >
                 {isEditing ? "Cancel" : "Edit Profile"}
@@ -1095,7 +1279,7 @@ export default function ProfilePage() {
                       className={styles.imagePreview}
                       src={
                         selectedImagePreview ||
-                        (profile.profileImageUrl
+                        (profile.profileImageUrl && !clearProfileImage
                           ? `${process.env.NEXT_PUBLIC_BACKEND_URL}${profile.profileImageUrl}`
                           : `${basePath}/defolt_profile_pic.jpg`)
                       }
@@ -1113,7 +1297,9 @@ export default function ProfilePage() {
                     <strong>
                       {selectedImageFile
                         ? "New image selected"
-                        : "Current profile image"}
+                        : clearProfileImage
+                          ? "Profile image marked for removal"
+                          : "Current profile image"}
                     </strong>
                     <p>Choose a JPG, PNG, or WebP image. Maximum size: 5 MB.</p>
                     <div className={styles.imageUploadActions}>
@@ -1138,19 +1324,35 @@ export default function ProfilePage() {
                             : "Choose photo"}
                         </span>
                       </label>
-                      {selectedImageFile && (
+                      {(selectedImageFile ||
+                        profile.profileImageUrl ||
+                        clearProfileImage) && (
                         <button
-                          className={styles.imageRemoveButton}
+                          className={styles.samplePhotoClear}
                           type="button"
+                          disabled={isSaving}
                           onClick={() => {
-                            updateSelectedImage(null);
-                            if (imageInputRef.current) {
-                              imageInputRef.current.value = "";
+                            if (clearProfileImage) {
+                              setClearProfileImage(false);
+                            } else if (selectedImageFile) {
+                              updateSelectedImage(null);
+                            } else {
+                              setClearProfileImage(true);
                             }
+                            if (imageInputRef.current) imageInputRef.current.value = "";
                           }}
                         >
-                          Clear selection
+                          {clearProfileImage
+                            ? "Undo clear"
+                            : selectedImageFile
+                              ? "Clear selection"
+                              : "Clear photo"}
                         </button>
+                      )}
+                      {clearProfileImage && (
+                        <small className={styles.imageFileName}>
+                          Profile photo will be removed when you save.
+                        </small>
                       )}
                     </div>
                     {selectedImageFile && (
@@ -1164,6 +1366,122 @@ export default function ProfilePage() {
 
               {isPhotographer && (
                 <section className={styles.editSection}>
+                  <h2>Profile video</h2>
+                  <p className={styles.sampleIntro}>
+                    Share a video with clients. MP4, WebM, MOV, AVI, OGG, or MKV
+                    files up to 15 MB are supported. You can add up to two
+                    videos.
+                  </p>
+                  <div className={styles.videoSlots}>
+                    {getProfileVideos(profile, profileVideos).map(
+                      (videoUrl, index) => {
+                        const isMarkedForRemoval =
+                          deletedVideoSlots.includes(index);
+                        const previewUrl = selectedVideoPreviews[index];
+                        return (
+                          <article className={styles.videoUpload} key={index}>
+                            <div className={styles.videoPreviewFrame}>
+                              {previewUrl ||
+                              (videoUrl && !isMarkedForRemoval) ? (
+                                <video
+                                  className={styles.videoPreview}
+                                  src={
+                                    previewUrl || getGalleryImageUrl(videoUrl)
+                                  }
+                                  controls
+                                  playsInline
+                                  preload="metadata"
+                                />
+                              ) : (
+                                <p>No video in slot {index + 1}.</p>
+                              )}
+                            </div>
+                            <div className={styles.imageUploadContent}>
+                              <strong>
+                                {selectedVideoFiles[index]
+                                  ? "New video selected"
+                                  : videoUrl
+                                    ? `Current video ${index + 1}`
+                                    : `Add video ${index + 1}`}
+                              </strong>
+                              <p>Maximum size: 15 MB.</p>
+                              <label className={styles.imageSelectButton}>
+                                <input
+                                  ref={(element) => {
+                                    videoInputRefs.current[index] = element;
+                                  }}
+                                  className={styles.imageFileInput}
+                                  type="file"
+                                  accept={allowedProfileVideoTypes.join(",")}
+                                  aria-label={`Choose profile video ${index + 1}`}
+                                  onChange={(event) => {
+                                    updateSelectedVideo(
+                                      index,
+                                      event.currentTarget.files?.[0] ?? null,
+                                    );
+                                    setSaveMessage("");
+                                  }}
+                                />
+                                <span>
+                                  {selectedVideoFiles[index]
+                                    ? "Choose another"
+                                    : videoUrl
+                                      ? "Replace video"
+                                      : "Choose video"}
+                                </span>
+                              </label>
+                              {selectedVideoFiles[index] && (
+                                <small className={styles.imageFileName}>
+                                  {selectedVideoFiles[index].name}
+                                </small>
+                              )}
+                              {(selectedVideoFiles[index] ||
+                                (videoUrl && !isMarkedForRemoval) ||
+                                isMarkedForRemoval) && (
+                                <button
+                                  className={styles.samplePhotoClear}
+                                  type="button"
+                                  disabled={isSaving}
+                                  onClick={() => {
+                                    if (isMarkedForRemoval) {
+                                      setDeletedVideoSlots((slots) =>
+                                        slots.filter((slot) => slot !== index),
+                                      );
+                                    } else if (selectedVideoFiles[index]) {
+                                      updateSelectedVideo(index, null);
+                                    } else {
+                                      setDeletedVideoSlots((slots) => [
+                                        ...slots,
+                                        index,
+                                      ]);
+                                    }
+                                    const input = videoInputRefs.current[index];
+                                    if (input) input.value = "";
+                                  }}
+                                >
+                                  {isMarkedForRemoval
+                                    ? "Undo clear"
+                                    : selectedVideoFiles[index]
+                                      ? "Clear selection"
+                                      : "Clear video"}
+                                </button>
+                              )}
+                              {isMarkedForRemoval && (
+                                <small className={styles.imageFileName}>
+                                  Video will be removed when you save.
+                                </small>
+                              )}
+                            </div>
+                          </article>
+                        );
+                      },
+                    )}
+                  </div>
+                </section>
+              )}
+
+              {isPhotographer && (
+                <section className={styles.editSection}>
                   <h2>Portfolio sample photos</h2>
                   <p className={styles.sampleIntro}>
                     Upload up to five photos to show clients examples of your
@@ -1173,9 +1491,15 @@ export default function ProfilePage() {
                   <div className={styles.samplePhotoGrid}>
                     {sampleFiles.map((file, index) => {
                       const savedPhoto = galleryPhotos[index];
+                      const isMarkedForRemoval =
+                        savedPhoto &&
+                        deletedSamplePhotoIds.includes(savedPhoto._id);
                       const previewUrl = samplePreviewUrls[index];
                       const imageUrl =
-                        previewUrl || getGalleryImageUrl(savedPhoto?.link);
+                        previewUrl ||
+                        (savedPhoto && !isMarkedForRemoval
+                          ? getGalleryImageUrl(savedPhoto.link)
+                          : "");
                       return (
                         <article className={styles.samplePhotoSlot} key={index}>
                           <div className={styles.samplePhotoPreview}>
@@ -1201,7 +1525,7 @@ export default function ProfilePage() {
                                 type="file"
                                 accept="image/*"
                                 aria-label={`Choose sample photo ${index + 1}`}
-                                disabled={galleryLoading || isSavingSamples}
+                                disabled={galleryLoading || isSaving}
                                 onChange={(event) =>
                                   updateSampleFile(
                                     index,
@@ -1215,23 +1539,39 @@ export default function ProfilePage() {
                                   ? "Replace photo"
                                   : "Choose photo"}
                             </label>
-                            {file && (
+                            {(file || savedPhoto || isMarkedForRemoval) && (
                               <div className={styles.samplePhotoSelection}>
                                 <small className={styles.samplePhotoFilename}>
-                                  {file.name}
+                                  {isMarkedForRemoval
+                                    ? "Will be removed when you save."
+                                    : file?.name || ""}
                                 </small>
                                 <button
                                   className={styles.samplePhotoClear}
                                   type="button"
-                                  disabled={isSavingSamples}
+                                  disabled={isSaving}
                                   onClick={() => {
-                                    updateSampleFile(index, null);
-                                    const input =
-                                      sampleFileInputRefs.current[index];
+                                    if (isMarkedForRemoval) {
+                                      setDeletedSamplePhotoIds((ids) =>
+                                        ids.filter((id) => id !== savedPhoto._id),
+                                      );
+                                    } else if (file) {
+                                      updateSampleFile(index, null);
+                                    } else if (savedPhoto) {
+                                      setDeletedSamplePhotoIds((ids) => [
+                                        ...ids,
+                                        savedPhoto._id,
+                                      ]);
+                                    }
+                                    const input = sampleFileInputRefs.current[index];
                                     if (input) input.value = "";
                                   }}
                                 >
-                                  Clear
+                                  {isMarkedForRemoval
+                                    ? "Undo clear"
+                                    : file
+                                      ? "Clear selection"
+                                      : "Clear photo"}
                                 </button>
                               </div>
                             )}
@@ -1245,30 +1585,6 @@ export default function ProfilePage() {
                       Loading saved sample photos...
                     </p>
                   )}
-                  {sampleMessage && (
-                    <p
-                      className={
-                        sampleMessageIsError
-                          ? styles.editError
-                          : styles.editNotice
-                      }
-                      role={sampleMessageIsError ? "alert" : "status"}
-                    >
-                      {sampleMessage}
-                    </p>
-                  )}
-                  <div className={styles.samplePhotoActions}>
-                    <button
-                      className={styles.saveButton}
-                      type="button"
-                      disabled={galleryLoading || isSavingSamples}
-                      onClick={saveSamplePhotos}
-                    >
-                      {isSavingSamples
-                        ? "Saving photos..."
-                        : "Save sample photos"}
-                    </button>
-                  </div>
                 </section>
               )}
 
@@ -1284,11 +1600,22 @@ export default function ProfilePage() {
               )}
               <div className={styles.editActions}>
                 <button
+                  className={styles.backToProfileButton}
+                  type="button"
+                  disabled={isSaving}
+                  onClick={cancelProfileEdit}
+                >
+                  Back to profile
+                </button>
+                <button
                   className={styles.saveButton}
                   type="submit"
-                  disabled={isSaving}
+                  disabled={
+                    isSaving ||
+                    (isPhotographer && galleryLoading && sampleFiles.some(Boolean))
+                  }
                 >
-                  {isSaving ? "Saving..." : "Save changes"}
+                  {isSaving ? "Saving profile..." : "Save profile"}
                 </button>
               </div>
             </form>
@@ -1527,6 +1854,58 @@ export default function ProfilePage() {
                   ))}
                 </section>
               </div>
+              {isPhotographer && (
+                <section className={styles.portfolioMediaSection}>
+                  <header className={styles.portfolioMediaHeader}>
+                    <h2>Portfolio media</h2>
+                    <p>Photos and videos shared on your profile</p>
+                  </header>
+                  {galleryPhotos.length > 0 ||
+                  getProfileVideos(profile, profileVideos).some(Boolean) ? (
+                    <div className={styles.savedMediaWaterfall}>
+                      {galleryPhotos.map((photo, index) => (
+                        <figure
+                          className={styles.savedMediaItem}
+                          key={photo._id || `${photo.link}-${index}`}
+                        >
+                          <Image
+                            className={styles.savedPortfolioPhoto}
+                            src={getGalleryImageUrl(photo.link)}
+                            alt={`Portfolio photo ${index + 1}`}
+                            width={640}
+                            height={440}
+                            unoptimized
+                          />
+                        </figure>
+                      ))}
+                      {getProfileVideos(profile, profileVideos)
+                        .filter(Boolean)
+                        .map((videoUrl, index) => (
+                          <figure
+                            className={styles.savedMediaItem}
+                            key={`${videoUrl}-${index}`}
+                          >
+                            <video
+                              className={styles.savedProfileVideo}
+                              src={getGalleryImageUrl(videoUrl)}
+                              autoPlay
+                              controls
+                              loop
+                              muted
+                              playsInline
+                              preload="metadata"
+                            />
+                            <figcaption>Profile video {index + 1}</figcaption>
+                          </figure>
+                        ))}
+                    </div>
+                  ) : (
+                    <p className={styles.portfolioMediaEmpty}>
+                      No portfolio photos or videos uploaded yet.
+                    </p>
+                  )}
+                </section>
+              )}
             </>
           )}
         </div>

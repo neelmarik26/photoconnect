@@ -48,8 +48,9 @@ export default function PhotographerDetailsPage() {
   const params = useParams();
   const photographerId = params.id;
   const [photographer, setPhotographer] = useState(null);
+  const [profileVideos, setProfileVideos] = useState([]);
   const [galleryPhotos, setGalleryPhotos] = useState([]);
-  const [selectedImage, setSelectedImage] = useState("");
+  const [selectedMedia, setSelectedMedia] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [galleryLoading, setGalleryLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -80,8 +81,9 @@ export default function PhotographerDetailsPage() {
       setIsLoading(true);
       setErrorMessage("");
       setPhotographer(null);
+      setProfileVideos([]);
       setGalleryPhotos([]);
-      setSelectedImage("");
+      setSelectedMedia(null);
       setGalleryError("");
 
       try {
@@ -101,6 +103,31 @@ export default function PhotographerDetailsPage() {
         setIsLoading(false);
 
         try {
+          const videosResponse = await fetch(
+            `${backendUrl}/api/users/${encodeURIComponent(photographerId)}/profile-videos`,
+          );
+          const videosResult = await videosResponse.json().catch(() => null);
+          if (!videosResponse.ok) {
+            throw new Error(
+              videosResult?.message || "Could not load this photographer's videos.",
+            );
+          }
+          if (isCurrent) {
+            setProfileVideos(
+              Array.isArray(videosResult)
+                ? videosResult
+                : videosResult?.data ?? [],
+            );
+          }
+        } catch (error) {
+          if (isCurrent) {
+            setGalleryError(
+              error.message || "Could not load this photographer's videos.",
+            );
+          }
+        }
+
+        try {
           const galleryResponse = await fetch(
             `${backendUrl}/api/photo-galleries/user/${encodeURIComponent(photographerId)}?limit=50&sortBy=sequence&sortOrder=asc`,
           );
@@ -117,8 +144,7 @@ export default function PhotographerDetailsPage() {
             setGalleryPhotos(
               photos
                 .filter((photo) => !photo.isProfileImage && photo.link)
-                .sort((first, second) => first.sequence - second.sequence)
-                .slice(0, 5),
+                .sort((first, second) => first.sequence - second.sequence),
             );
           }
         } catch (error) {
@@ -159,6 +185,48 @@ export default function PhotographerDetailsPage() {
   const occupiedDates = Array.isArray(photographer?.occupiedDates)
     ? photographer.occupiedDates
     : [];
+  const profileVideoUrls = (
+    profileVideos.length
+      ? [...profileVideos]
+          .sort((first, second) => first.slot - second.slot)
+          .map((video) => video.videoUrl)
+      : Array.isArray(photographer?.profileVideoUrls) &&
+          photographer.profileVideoUrls.length
+        ? photographer.profileVideoUrls
+        : photographer?.profileVideoUrl
+          ? [photographer.profileVideoUrl]
+          : []
+  ).filter(Boolean);
+  const portfolioMedia = [
+    ...galleryPhotos.map((photo, index) => ({
+      type: "photo",
+      src: getImageUrl(photo.link),
+      label: `Portfolio photo ${index + 1}`,
+      key: photo._id || `${photo.link}-${index}`,
+    })),
+    ...profileVideoUrls.map((videoUrl, index) => ({
+      type: "video",
+      src: getImageUrl(videoUrl),
+      label: `Profile video ${index + 1}`,
+      key: `${videoUrl}-${index}`,
+    })),
+  ];
+
+  useEffect(() => {
+    if (!selectedMedia) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setSelectedMedia(null);
+    };
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedMedia]);
 
     const handleBookingSubmit = async (e) => {
       e.preventDefault();
@@ -257,7 +325,7 @@ export default function PhotographerDetailsPage() {
               <div className={styles.galleryColumn}>
                 <div className={styles.mainImage}>
                   <Image
-                    src={getImageUrl(selectedImage || photographer.profileImageUrl)}
+                    src={getImageUrl(photographer.profileImageUrl)}
                     alt={photographer.name}
                     width={900}
                     height={700}
@@ -267,43 +335,6 @@ export default function PhotographerDetailsPage() {
                       event.currentTarget.src = fallbackImage;
                     }}
                   />
-                </div>
-                <div className={styles.thumbnails} aria-label="Portfolio photos">
-                  {galleryPhotos.map((photo, index) => (
-                    <button
-                      className={`${styles.thumbnail} ${
-                        selectedImage === getImageUrl(photo.link)
-                          ? styles.thumbnailSelected
-                          : ""
-                      }`}
-                      key={photo._id || `${photo.link}-${index}`}
-                      type="button"
-                      aria-label={`View portfolio photo ${index + 1}`}
-                      aria-pressed={selectedImage === getImageUrl(photo.link)}
-                      onClick={() => setSelectedImage(getImageUrl(photo.link))}
-                    >
-                      <Image
-                        src={getImageUrl(photo.link)}
-                        alt=""
-                        width={180}
-                        height={120}
-                        unoptimized
-                      />
-                    </button>
-                  ))}
-                  {galleryLoading && (
-                    <p className={styles.galleryEmpty}>Loading portfolio photos...</p>
-                  )}
-                  {!galleryLoading && galleryError && (
-                    <p className={styles.galleryEmpty} role="alert">
-                      {galleryError}
-                    </p>
-                  )}
-                  {!galleryLoading && !galleryError && !galleryPhotos.length && (
-                    <p className={styles.galleryEmpty}>
-                      This photographer has not uploaded sample photos yet.
-                    </p>
-                  )}
                 </div>
                 <div className={styles.facts}>
                   <p>
@@ -318,15 +349,6 @@ export default function PhotographerDetailsPage() {
                     <b>Experience</b>
                     {experience || "Not provided"}
                   </p>
-                  {photographer.portfolioUrl && (
-                    <a
-                      href={photographer.portfolioUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      View Full Portfolio ↗
-                    </a>
-                  )}
                 </div>
               </div>
 
@@ -369,7 +391,6 @@ export default function PhotographerDetailsPage() {
                     <p>{photographer.about}</p>
                   </div>
                 )}
-
                 <section className={styles.calendar}>
                   <h3>Availability Calendar ({calendarMonth.getFullYear()})</h3>
                   <div className={styles.calendarHeader}>
@@ -494,6 +515,123 @@ export default function PhotographerDetailsPage() {
                                   </section>
                                 </div>
                               </section>
+                              <section
+                                className={styles.portfolioCard}
+                                aria-labelledby="portfolio-title"
+                              >
+                                <header className={styles.portfolioHeader}>
+                                  <div>
+                                    <p>PORTFOLIO</p>
+                                    <h2 id="portfolio-title">
+                                      Photos &amp; videos
+                                    </h2>
+                                  </div>
+                                  <span>
+                                    {portfolioMedia.length}{" "}
+                                    {portfolioMedia.length === 1
+                                      ? "item"
+                                      : "items"}
+                                  </span>
+                                </header>
+                                {galleryError && (
+                                  <p className={styles.galleryStatus} role="alert">
+                                    {galleryError}
+                                  </p>
+                                )}
+                                {galleryLoading ? (
+                                  <p className={styles.galleryStatus} role="status">
+                                    Loading portfolio...
+                                  </p>
+                                ) : portfolioMedia.length ? (
+                                  <div className={styles.portfolioGrid}>
+                                    {portfolioMedia.map((item) => (
+                                      <button
+                                        className={styles.portfolioItem}
+                                        key={item.key}
+                                        type="button"
+                                        aria-label={`Open ${item.label}`}
+                                        onClick={() => setSelectedMedia(item)}
+                                      >
+                                        {item.type === "photo" ? (
+                                          <Image
+                                            className={styles.portfolioPhoto}
+                                            src={item.src}
+                                            alt={item.label}
+                                            width={700}
+                                            height={500}
+                                            unoptimized
+                                          />
+                                        ) : (
+                                          <video
+                                            className={styles.portfolioVideo}
+                                            src={item.src}
+                                            autoPlay
+                                            loop
+                                            muted
+                                            playsInline
+                                            preload="metadata"
+                                            aria-label={item.label}
+                                          />
+                                        )}
+                                        <span className={styles.portfolioItemLabel}>
+                                          {item.type === "video" ? "▶ " : ""}
+                                          {item.label}
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className={styles.galleryStatus}>
+                                    This photographer has not uploaded any
+                                    portfolio photos or videos yet.
+                                  </p>
+                                )}
+                              </section>
+                              {selectedMedia && (
+                                <div
+                                  className={styles.lightboxOverlay}
+                                  role="presentation"
+                                  onClick={() => setSelectedMedia(null)}
+                                >
+                                  <section
+                                    className={styles.lightbox}
+                                    role="dialog"
+                                    aria-modal="true"
+                                    aria-label={selectedMedia.label}
+                                    onClick={(event) => event.stopPropagation()}
+                                  >
+                                    <button
+                                      className={styles.lightboxClose}
+                                      type="button"
+                                      aria-label="Close gallery preview"
+                                      onClick={() => setSelectedMedia(null)}
+                                    >
+                                      ×
+                                    </button>
+                                    {selectedMedia.type === "photo" ? (
+                                      <Image
+                                        className={styles.lightboxPhoto}
+                                        src={selectedMedia.src}
+                                        alt={selectedMedia.label}
+                                        width={1600}
+                                        height={1200}
+                                        unoptimized
+                                      />
+                                    ) : (
+                                      <video
+                                        className={styles.lightboxVideo}
+                                        src={selectedMedia.src}
+                                        autoPlay
+                                        controls
+                                        loop
+                                        muted
+                                        playsInline
+                                        preload="metadata"
+                                      />
+                                    )}
+                                  </section>
+                                </div>
+                              )}
                             </>
                           )}
 

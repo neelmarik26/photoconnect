@@ -71,42 +71,11 @@
   background: #e8eef1;
 }
 
-.mainImage img,
-.thumbnail img {
+.mainImage img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-.thumbnails {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 7px;
-  margin-top: 10px;
-}
-
-.thumbnail {
-  overflow: hidden;
-  aspect-ratio: 1.35;
-  padding: 0;
-  border: 2px solid transparent;
-  border-radius: 4px;
-  background: #e8eef1;
-  cursor: pointer;
-}
-
-.thumbnail:hover,
-.thumbnailSelected {
-  border-color: #1878f2;
-}
-
-.galleryEmpty {
-  grid-column: 1 / -1;
-  margin: 4px 0;
-  color: #607686;
-  font-size: 12px;
-  line-height: 1.5;
 }
 
 .facts {
@@ -225,6 +194,154 @@
   line-height: 1.6;
   overflow-wrap: anywhere;
   white-space: pre-line;
+}
+
+.portfolioCard {
+  margin-top: 24px;
+  padding: clamp(18px, 3vw, 30px);
+  border: 1px solid #e1e8eb;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 30px rgb(23 44 59 / 8%);
+}
+
+.portfolioHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.portfolioHeader p {
+  margin-bottom: 6px;
+  color: #16806c;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.portfolioHeader h2 {
+  color: #172c3b;
+  font-size: clamp(19px, 2.5vw, 24px);
+}
+
+.portfolioHeader > span {
+  flex: 0 0 auto;
+  color: #637586;
+  font-size: 12px;
+}
+
+.galleryStatus {
+  margin: 8px 0;
+  color: #607686;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.portfolioGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.portfolioItem {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border: 1px solid #e1e8eb;
+  border-radius: 6px;
+  background: #172c3b;
+  cursor: zoom-in;
+}
+
+.portfolioPhoto,
+.portfolioVideo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 180ms ease;
+}
+
+.portfolioItem:hover .portfolioPhoto,
+.portfolioItem:hover .portfolioVideo {
+  transform: scale(1.04);
+}
+
+.portfolioItemLabel {
+  position: absolute;
+  inset: auto 0 0;
+  padding: 24px 12px 10px;
+  background: linear-gradient(transparent, rgb(10 24 34 / 78%));
+  color: #fff;
+  font-size: 11px;
+  text-align: left;
+}
+
+.portfolioItem:focus-visible,
+.lightboxClose:focus-visible {
+  outline: 3px solid #1878f2;
+  outline-offset: 3px;
+}
+
+.lightboxOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(8 17 24 / 88%);
+  animation: modalFadeIn 160ms ease;
+}
+
+.lightbox {
+  position: relative;
+  display: grid;
+  width: min(1100px, 100%);
+  max-height: calc(100vh - 48px);
+  place-items: center;
+}
+
+.lightboxPhoto,
+.lightboxVideo {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: calc(100vh - 48px);
+  object-fit: contain;
+}
+
+.lightboxVideo {
+  width: min(100%, 1000px);
+  background: #000;
+}
+
+.lightboxClose {
+  position: absolute;
+  top: -16px;
+  right: -16px;
+  z-index: 1;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 55%);
+  border-radius: 50%;
+  background: #fff;
+  color: #172c3b;
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
+}
+
+.lightboxClose:hover {
+  background: #eaf1f5;
 }
 
 .calendar {
@@ -668,10 +785,6 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .galleryColumn {
-    padding: 16px;
-  }
-
   .mainImage {
     aspect-ratio: 16 / 10;
   }
@@ -695,6 +808,20 @@
     padding: 24px 18px;
     border-top: 1px solid #e0e7eb;
   }
+
+  .portfolioGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .lightboxOverlay {
+    padding: 16px;
+  }
+
+  .lightboxClose {
+    top: -14px;
+    right: -8px;
+  }
 }
 
 @media (max-width: 420px) {
@@ -712,6 +839,18 @@
 
   .approved {
     margin-top: 0;
+  }
+
+  .portfolioGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .portfolioHeader {
+    align-items: flex-start;
+  }
+
+  .portfolioHeader > span {
+    padding-top: 2px;
   }
 
   .calendarGrid > * {

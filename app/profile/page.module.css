@@ -101,6 +101,10 @@
   gap: 28px;
   margin-top: 24px;
 }
+.profileDetailsLayoutSingle {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto;
+}
 .availabilitySection {
   min-width: 0;
   height: 100%;

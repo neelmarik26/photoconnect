@@ -131,7 +131,9 @@ export default function Navbar({ current = "home", hideAuthActions = false, full
                 className={styles.profileAvatar}
                 src={
                   savedUser.profileImageUrl
-                    ? `${process.env.NEXT_PUBLIC_BACKEND_URL}${savedUser.profileImageUrl}`
+                    ? /^https?:\/\//i.test(savedUser.profileImageUrl)
+                      ? savedUser.profileImageUrl
+                      : `${process.env.NEXT_PUBLIC_BACKEND_URL}${savedUser.profileImageUrl}`
                     : `${basePath}/defolt_profile_pic.jpg`
                 }
                 alt=""

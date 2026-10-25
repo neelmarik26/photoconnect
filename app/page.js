@@ -256,6 +256,12 @@ export default function Home() {
     console.log("Search input:", value);
   };
 
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setSelectedDistrict("");
+    setSelectedCity("");
+  };
+
     const handleDistrictChange = (e) => {
       const value = e.target.value;
       setSelectedDistrict(value);
@@ -504,6 +510,14 @@ export default function Home() {
               ))}
             </select>
           </div>
+          <button
+            className={styles.clearButton}
+            type="button"
+            onClick={handleClearFilters}
+            disabled={!searchTerm && !selectedDistrict && !selectedCity}
+          >
+            Clear
+          </button>
         </div>
 
         {photographersLoading ? (

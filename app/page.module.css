@@ -310,6 +310,35 @@
   cursor: not-allowed;
 }
 
+.clearButton {
+  padding: 12px 18px;
+  border: 1px solid #d1d9de;
+  border-radius: 6px;
+  color: #344b5a;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+
+.clearButton:hover:not(:disabled) {
+  border-color: #1878f2;
+  color: #1878f2;
+  background: #f5f9ff;
+}
+
+.clearButton:focus-visible {
+  outline: 3px solid #1878f233;
+  outline-offset: 2px;
+}
+
+.clearButton:disabled {
+  color: #9aa5b1;
+  background: #f4f7f8;
+  cursor: not-allowed;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

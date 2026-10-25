@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ReactTags } from "react-tag-autocomplete";
+import Swal from "sweetalert2";
 import Navbar from "../components/Navbar";
 import styles from "./page.module.css";
 
@@ -308,6 +309,12 @@ export default function ProfilePage() {
 
   const photographerId = profile?._id;
   const isPhotographer = profile?.type === "PHOTOGRAPHER";
+  const visibleEditableSections = isPhotographer
+    ? editableSections
+    : editableSections.filter((section) => section.title !== "Photographer profile");
+  const visibleProfileSections = isPhotographer
+    ? profileSections
+    : profileSections.filter((section) => section.title !== "Photographer profile");
 
   useEffect(() => {
     if (!photographerId || !isPhotographer) return;
@@ -820,6 +827,13 @@ export default function ProfilePage() {
       setIsCalendarOpen(false);
       setSaveMessage("Profile updated successfully.");
       setSaveMessageIsError(false);
+      await Swal.fire({
+        icon: "success",
+        title: "Profile updated",
+        text: "Your profile changes have been saved successfully.",
+        confirmButtonText: "OK",
+        confirmButtonColor: "#3085d6",
+      });
     } catch (error) {
       setSaveMessage(
         savedProfileParts.length
@@ -978,7 +992,7 @@ export default function ProfilePage() {
 
           {profile && isEditing && (
             <form className={styles.editForm} onSubmit={submitProfile}>
-              {editableSections.map((section) => (
+              {visibleEditableSections.map((section) => (
                 <section className={styles.editSection} key={section.title}>
                   <h2>{section.title}</h2>
                   <div className={styles.editGrid}>
@@ -1655,7 +1669,12 @@ export default function ProfilePage() {
                 </span>
               </section>
 
-              <div className={styles.profileDetailsLayout}>
+              <div
+                className={`${styles.profileDetailsLayout} ${
+                  isPhotographer ? "" : styles.profileDetailsLayoutSingle
+                }`}
+              >
+                {isPhotographer && (
                 <section className={styles.availabilitySection}>
                   <header className={styles.availabilityHeader}>
                     <div>
@@ -1820,12 +1839,13 @@ export default function ProfilePage() {
                     </p>
                   )}
                 </section>
+                )}
 
                 <section className={styles.accountDetails}>
                   <div className={styles.sectionHeading}>
                     <h2>Account details</h2>
                   </div>
-                  {profileSections.map((section) => (
+                  {visibleProfileSections.map((section) => (
                     <section
                       className={styles.detailSection}
                       key={section.title}

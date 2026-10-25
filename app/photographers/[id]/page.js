@@ -2,8 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import Swal from "sweetalert2";
 import Footer from "../../components/Footer";
 import Navbar from "../../components/Navbar";
 import styles from "./page.module.css";
@@ -46,6 +47,7 @@ function getDateKey(date, day) {
 
 export default function PhotographerDetailsPage() {
   const params = useParams();
+  const router = useRouter();
   const photographerId = params.id;
   const [photographer, setPhotographer] = useState(null);
   const [profileVideos, setProfileVideos] = useState([]);
@@ -55,6 +57,7 @@ export default function PhotographerDetailsPage() {
   const [galleryLoading, setGalleryLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [galleryError, setGalleryError] = useState("");
+  const [isPhotographerAccount, setIsPhotographerAccount] = useState(null);
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -72,6 +75,62 @@ export default function PhotographerDetailsPage() {
   const [bookingLoading, setBookingLoading] = useState(false);
   const [bookingError, setBookingError] = useState("");
   const [bookingSuccess, setBookingSuccess] = useState(false);
+
+  async function handleBookNow() {
+    let user;
+    try {
+      user = JSON.parse(window.localStorage.getItem("photoConnectUser") || "null");
+    } catch {
+      user = null;
+    }
+
+    if (!user?.userId) {
+      const result = await Swal.fire({
+        icon: "info",
+        title: "Sign up to book",
+        text: "Please create an account before booking a photographer.",
+        confirmButtonText: "Continue",
+        showCancelButton: true,
+        cancelButtonText: "Cancel",
+        confirmButtonColor: "#3085d6",
+      });
+      if (result.isConfirmed) {
+        router.push("/signup");
+      }
+      return;
+    }
+
+    setBookingError("");
+    setBookingSuccess(false);
+    setBookingForm((prev) => ({
+      ...prev,
+      eventDate: selectedDates.map(
+        (date) => new Date(`${date}T10:00:00.000Z`).toISOString(),
+      ),
+    }));
+    setShowBookingModal(true);
+  }
+
+  useEffect(() => {
+    function loadAccountType() {
+      const savedUser = window.localStorage.getItem("photoConnectUser");
+      if (!savedUser) {
+        setIsPhotographerAccount(false);
+        return;
+      }
+
+      try {
+        const user = JSON.parse(savedUser);
+        setIsPhotographerAccount(user.type?.toUpperCase() === "PHOTOGRAPHER");
+      } catch {
+        setIsPhotographerAccount(false);
+      }
+    }
+
+    loadAccountType();
+    window.addEventListener("storage", loadAccountType);
+    return () => window.removeEventListener("storage", loadAccountType);
+  }, []);
 
   useEffect(() => {
     if (typeof photographerId !== "string") return;
@@ -227,6 +286,25 @@ export default function PhotographerDetailsPage() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [selectedMedia]);
+
+  useEffect(() => {
+    if (!showBookingModal) return undefined;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function closeOnEscape(event) {
+      if (event.key === "Escape" && !bookingLoading) {
+        setShowBookingModal(false);
+      }
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [showBookingModal, bookingLoading]);
 
     const handleBookingSubmit = async (e) => {
       e.preventDefault();
@@ -495,19 +573,11 @@ export default function PhotographerDetailsPage() {
                                         </ul>
                                       </div>
                                     )}
-                                    {selectedDates.length > 0 && (
+                                    {isPhotographerAccount === false && selectedDates.length > 0 && (
                                       <button
                                         type="button"
                                         className={styles.bookButton}
-                                        onClick={() => {
-                                          setBookingForm((prev) => ({
-                                            ...prev,
-                                            eventDate: selectedDates.map(
-                                              (d) => new Date(`${d}T10:00:00.000Z`).toISOString()
-                                            ),
-                                          }));
-                                          setShowBookingModal(true);
-                                        }}
+                                        onClick={handleBookNow}
                                       >
                                         Book Now ({selectedDates.length}/3)
                                       </button>
@@ -637,92 +707,169 @@ export default function PhotographerDetailsPage() {
 
                           {/* Booking Modal */}
                           {showBookingModal && (
-                            <div className={styles.modalOverlay} onClick={() => setShowBookingModal(false)}>
-                              <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+                            <div
+                              className={styles.modalOverlay}
+                              onClick={() => {
+                                if (!bookingLoading) setShowBookingModal(false);
+                              }}
+                            >
+                              <section
+                                className={styles.modal}
+                                role="dialog"
+                                aria-modal="true"
+                                aria-labelledby="booking-modal-title"
+                                aria-describedby="booking-modal-description"
+                                onClick={(event) => event.stopPropagation()}
+                              >
                                 <div className={styles.modalHeader}>
-                                  <h3>Book {photographer?.name}</h3>
+                                  <div>
+                                    <p className={styles.modalEyebrow}>BOOKING REQUEST</p>
+                                    <h3 id="booking-modal-title">Book {photographer?.name}</h3>
+                                    <p id="booking-modal-description">
+                                      Share your event details to send a booking request.
+                                    </p>
+                                  </div>
                                   <button
                                     type="button"
                                     className={styles.modalClose}
                                     onClick={() => setShowBookingModal(false)}
-                                    aria-label="Close modal"
+                                    disabled={bookingLoading}
+                                    aria-label="Close booking form"
                                   >
                                     ×
                                   </button>
                                 </div>
+                                <div className={styles.bookingSummary}>
+                                  <Image
+                                    className={styles.bookingAvatar}
+                                    src={getImageUrl(photographer?.profileImageUrl)}
+                                    alt=""
+                                    width={48}
+                                    height={48}
+                                    unoptimized
+                                    onError={(event) => {
+                                      event.currentTarget.onerror = null;
+                                      event.currentTarget.src = fallbackImage;
+                                    }}
+                                  />
+                                  <div className={styles.bookingSummaryCopy}>
+                                    <strong>{photographer?.name}</strong>
+                                    <span>{location}</span>
+                                  </div>
+                                  <span className={styles.bookingDateCount}>
+                                    {bookingForm.eventDate.length}{" "}
+                                    {bookingForm.eventDate.length === 1 ? "date" : "dates"}
+                                  </span>
+                                </div>
                                 <form onSubmit={handleBookingSubmit} className={styles.modalForm}>
-                                  {bookingError && <div className={styles.modalError}>{bookingError}</div>}
-                                  {bookingSuccess && <div className={styles.modalSuccess}>Booking submitted successfully!</div>}
+                                  <div className={styles.modalFormContent}>
+                                    {bookingError && (
+                                      <div className={styles.modalError} role="alert">
+                                        {bookingError}
+                                      </div>
+                                    )}
+                                    {bookingSuccess && (
+                                      <div className={styles.modalSuccess} role="status">
+                                        Booking submitted successfully!
+                                      </div>
+                                    )}
 
-                                  <div className={styles.modalField}>
-                                    <label htmlFor="eventDate">Event Date(s) *</label>
-                                                                      <div className={styles.dateInputs}>
-                                                                        {bookingForm.eventDate.map((date, idx) => (
-                                                                          <div key={idx} className={styles.dateInputRow}>
-                                                                            <input
-                                                                              type="date"
-                                                                              value={date?.slice(0, 10) || ""}
-                                                                              onChange={(e) => {
-                                                                                const newDate = e.target.value;
-                                                                                if (newDate) {
-                                                                                  const isoDate = new Date(`${newDate}T10:00:00.000Z`).toISOString();
-                                                                                  // Check if date is occupied
-                                                                                  const dateKey = newDate;
-                                                                                  const isOccupied = occupiedDates.some(
-                                                                                    (d) => String(d).slice(0, 10) === dateKey
-                                                                                  );
-                                                                                  if (isOccupied) {
-                                                                                    setBookingError(`Date ${dateKey} is already booked. Please select another date.`);
-                                                                                    return;
-                                                                                  }
-                                                                                  setBookingForm((prev) => ({
-                                                                                    ...prev,
-                                                                                    eventDate: prev.eventDate.map((d, i) => (i === idx ? isoDate : d)),
-                                                                                  }));
-                                                                                  setBookingError("");
-                                                                                }
-                                                                              }}
-                                                                              required
-                                                                              min={new Date().toISOString().slice(0, 10)}
-                                                                            />
-                                                                            {bookingForm.eventDate.length > 1 && (
-                                                                              <button
-                                                                                type="button"
-                                                                                className={styles.removeDateBtn}
-                                                                                onClick={() => {
-                                                                                  setBookingForm((prev) => ({
-                                                                                    ...prev,
-                                                                                    eventDate: prev.eventDate.filter((_, i) => i !== idx),
-                                                                                  }));
-                                                                                }}
-                                                                                aria-label="Remove date"
-                                                                              >
-                                                                                ×
-                                                                              </button>
-                                                                            )}
-                                                                          </div>
-                                                                        ))}
-                                                                        {bookingForm.eventDate.length < 3 && (
-                                                                          <button
-                                                                            type="button"
-                                                                            className={styles.addDateBtn}
-                                                                            onClick={() => {
-                                                                              setBookingForm((prev) => ({
-                                                                                ...prev,
-                                                                                eventDate: [...prev.eventDate, ""],
-                                                                              }));
-                                                                            }}
-                                                                          >
-                                                                            + Add another date
-                                                                          </button>
-                                                                        )}
-                                                                      </div>
-                                                                      <small>Select up to 3 event dates. Occupied dates will show an error.</small>
-                                                                      {bookingError && <span className={styles.modalErrorInline}>{bookingError}</span>}
-                                                                    </div>
+                                    <section className={`${styles.bookingSection} ${styles.bookingSectionDates}`}>
+                                      <div className={styles.bookingSectionHeading}>
+                                        <span className={styles.bookingStep}>1</span>
+                                        <div>
+                                          <h4>Event dates</h4>
+                                          <p>Choose up to three possible dates.</p>
+                                        </div>
+                                      </div>
+                                      <div className={styles.modalField}>
+                                        <span className={styles.fieldLabel}>Event date(s) *</span>
+                                        <div className={styles.dateInputs}>
+                                          {bookingForm.eventDate.map((date, idx) => (
+                                            <div key={idx} className={styles.dateInputRow}>
+                                              <label className={styles.dateNumber} htmlFor={`eventDate-${idx}`}>
+                                                {`Date ${idx + 1}`}
+                                              </label>
+                                              <input
+                                                id={`eventDate-${idx}`}
+                                                type="date"
+                                                value={date?.slice(0, 10) || ""}
+                                                onChange={(event) => {
+                                                  const newDate = event.target.value;
+                                                  if (!newDate) return;
+                                                  const isOccupied = occupiedDates.some(
+                                                    (occupiedDate) =>
+                                                      String(occupiedDate).slice(0, 10) === newDate,
+                                                  );
+                                                  if (isOccupied) {
+                                                    setBookingError(
+                                                      `Date ${newDate} is unavailable. Please choose another date.`,
+                                                    );
+                                                    return;
+                                                  }
+                                                  const isoDate = new Date(
+                                                    `${newDate}T10:00:00.000Z`,
+                                                  ).toISOString();
+                                                  setBookingForm((prev) => ({
+                                                    ...prev,
+                                                    eventDate: prev.eventDate.map(
+                                                      (currentDate, index) =>
+                                                        index === idx ? isoDate : currentDate,
+                                                    ),
+                                                  }));
+                                                  setBookingError("");
+                                                }}
+                                                required
+                                                min={new Date().toISOString().slice(0, 10)}
+                                              />
+                                              {bookingForm.eventDate.length > 1 && (
+                                                <button
+                                                  type="button"
+                                                  className={styles.removeDateBtn}
+                                                  onClick={() => {
+                                                    setBookingForm((prev) => ({
+                                                      ...prev,
+                                                      eventDate: prev.eventDate.filter(
+                                                        (_, index) => index !== idx,
+                                                      ),
+                                                    }));
+                                                  }}
+                                                  aria-label={`Remove date ${idx + 1}`}
+                                                >
+                                                  ×
+                                                </button>
+                                              )}
+                                            </div>
+                                          ))}
+                                        </div>
+                                        {bookingForm.eventDate.length < 3 && (
+                                          <button
+                                            type="button"
+                                            className={styles.addDateBtn}
+                                            onClick={() => {
+                                              setBookingForm((prev) => ({
+                                                ...prev,
+                                                eventDate: [...prev.eventDate, ""],
+                                              }));
+                                            }}
+                                          >
+                                            + Add another date
+                                          </button>
+                                        )}
+                                        <small>Unavailable dates cannot be selected.</small>
+                                      </div>
+                                    </section>
 
+                                    <section className={`${styles.bookingSection} ${styles.bookingSectionDetails}`}>
+                                      <div className={styles.bookingSectionHeading}>
+                                        <span className={styles.bookingStep}>2</span>
+                                        <div>
+                                          <h4>Event details</h4>
+                                          <p>Tell the photographer where and how long.</p>
+                                        </div>
+                                      </div>
                                   <div className={styles.modalField}>
-                                    <label htmlFor="eventLocation">Event Location *</label>
+                                    <label htmlFor="eventLocation">Event location *</label>
                                     <input
                                       type="text"
                                       id="eventLocation"
@@ -733,8 +880,9 @@ export default function PhotographerDetailsPage() {
                                     />
                                   </div>
 
+                                      <div className={styles.bookingFieldsGrid}>
                                   <div className={styles.modalField}>
-                                    <label htmlFor="durationHours">Duration (Hours) *</label>
+                                    <label htmlFor="durationHours">Duration (hours) *</label>
                                     <input
                                       type="number"
                                       id="durationHours"
@@ -747,7 +895,7 @@ export default function PhotographerDetailsPage() {
                                   </div>
 
                                   <div className={styles.modalField}>
-                                    <label htmlFor="totalPrice">Total Price (₹) *</label>
+                                    <label htmlFor="totalPrice">Your budget (₹) *</label>
                                     <input
                                       type="number"
                                       id="totalPrice"
@@ -757,7 +905,17 @@ export default function PhotographerDetailsPage() {
                                       required
                                     />
                                   </div>
+                                      </div>
+                                    </section>
 
+                                    <section className={`${styles.bookingSection} ${styles.bookingSectionNotes}`}>
+                                      <div className={styles.bookingSectionHeading}>
+                                        <span className={styles.bookingStep}>3</span>
+                                        <div>
+                                          <h4>Anything else?</h4>
+                                          <p>Optional details help personalize your booking.</p>
+                                        </div>
+                                      </div>
                                   <div className={styles.modalField}>
                                     <label htmlFor="notes">Notes</label>
                                     <textarea
@@ -770,7 +928,7 @@ export default function PhotographerDetailsPage() {
                                   </div>
 
                                   <div className={styles.modalField}>
-                                    <label htmlFor="specialRequirements">Special Requirements</label>
+                                    <label htmlFor="specialRequirements">Special requirements</label>
                                     <textarea
                                       id="specialRequirements"
                                       value={bookingForm.specialRequirements}
@@ -779,12 +937,17 @@ export default function PhotographerDetailsPage() {
                                       rows="3"
                                     />
                                   </div>
+                                    </section>
+                                  </div>
 
                                   <div className={styles.modalActions}>
                                     <button
                                       type="button"
                                       className={styles.modalCancel}
-                                      onClick={() => setShowBookingModal(false)}
+                                      onClick={() => {
+                                        setShowBookingModal(false);
+                                        setBookingError("");
+                                      }}
                                       disabled={bookingLoading}
                                     >
                                       Cancel
@@ -794,11 +957,11 @@ export default function PhotographerDetailsPage() {
                                       className={styles.modalSubmit}
                                       disabled={bookingLoading}
                                     >
-                                      {bookingLoading ? "Booking..." : "Confirm Booking"}
+                                      {bookingLoading ? "Sending request..." : "Send booking request"}
                                     </button>
                                   </div>
                                 </form>
-                              </div>
+                              </section>
                             </div>
                           )}
                         </div>

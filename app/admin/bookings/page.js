@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import styles from "./page.module.css";
 
@@ -270,22 +271,24 @@ export default function BookingsPage() {
                   <td>
                     <div className={styles.person}>
                       <span className={styles.personAvatar}>
-                                    {booking.photographerId?.profileImageUrl ? (
-                          <img
-                                        src={`${process.env.NEXT_PUBLIC_BACKEND_URL}${booking.photographerId.profileImageUrl}`}
-                            alt=""
-                            width={30}
-                            height={30}
-                            className={styles.personPhoto}
-                          />
-                        ) : (
-                          booking.photographerId?.name
-                            ?.split(/\s+/)
-                            .filter(Boolean)
-                            .slice(0, 2)
-                            .map((part) => part[0].toUpperCase())
-                            .join("") || "PH"
-                        )}
+                        <Image
+                          src={
+                            booking.photographerId?.profileImageUrl
+                              ? /^https?:\/\//i.test(booking.photographerId.profileImageUrl)
+                                ? booking.photographerId.profileImageUrl
+                                : `${process.env.NEXT_PUBLIC_BACKEND_URL}${booking.photographerId.profileImageUrl}`
+                              : `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/defolt_profile_pic.jpg`
+                          }
+                          alt=""
+                          width={30}
+                          height={30}
+                          className={styles.personPhoto}
+                          unoptimized
+                          onError={(event) => {
+                            event.currentTarget.onerror = null;
+                            event.currentTarget.src = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/defolt_profile_pic.jpg`;
+                          }}
+                        />
                       </span>
                       <div>
                                     <b>{booking.photographerId?.name || "Unknown"}</b>

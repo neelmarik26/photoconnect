@@ -9,9 +9,10 @@ const statusLabels = {
   active: "Approved",
   inactive: "Deactivated",
 };
+const fallbackProfileImage = `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/defolt_profile_pic.jpg`;
 
 function getProfileImageUrl(path) {
-  if (!path) return "";
+  if (!path) return fallbackProfileImage;
   if (/^https?:\/\//i.test(path)) return path;
   return `${process.env.NEXT_PUBLIC_BACKEND_URL}${path}`;
 }
@@ -271,18 +272,18 @@ export default function AdminPage() {
                       <td>
                         <div className={styles.person}>
                           <span className={styles.personAvatar}>
-                            {photographer.profileImageUrl ? (
-                              <Image
-                                className={styles.personPhoto}
-                                src={photographer.profileImageUrl}
-                                alt=""
-                                width={30}
-                                height={30}
-                                unoptimized
-                              />
-                            ) : (
-                              photographer.initials
-                            )}
+                            <Image
+                              className={styles.personPhoto}
+                              src={photographer.profileImageUrl}
+                              alt=""
+                              width={30}
+                              height={30}
+                              unoptimized
+                              onError={(event) => {
+                                event.currentTarget.onerror = null;
+                                event.currentTarget.src = fallbackProfileImage;
+                              }}
+                            />
                           </span>
                           <div>
                             <b>{photographer.name}</b>

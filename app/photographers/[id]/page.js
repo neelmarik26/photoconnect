@@ -367,6 +367,7 @@ export default function PhotographerDetailsPage() {
           headers: {
             "Content-Type": "application/json",
             accept: "application/json",
+            ...(user.accessToken ? { Authorization: `Bearer ${user.accessToken}` } : {}),
           },
           body: JSON.stringify({
             photographerId,

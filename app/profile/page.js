@@ -677,8 +677,16 @@ export default function ProfilePage() {
     const savedProfileParts = [];
     try {
       const userId = encodeURIComponent(profile._id);
+      const savedUser = window.localStorage.getItem(savedUserKey);
+      const accessToken = savedUser ? JSON.parse(savedUser).accessToken : null;
       const updateProfile = async (url, options) => {
-        const response = await fetch(url, options);
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            ...options.headers,
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+        });
         const result = await response.json().catch(() => null);
         if (!response.ok) {
           throw new Error(result?.message || "Could not save profile changes.");
@@ -704,7 +712,12 @@ export default function ProfilePage() {
         if (shouldClearProfileImage) {
           const response = await fetch(
             `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/${userId}/profile-picture`,
-            { method: "DELETE" },
+            {
+              method: "DELETE",
+              headers: {
+                ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+              },
+            },
           );
           const result = await response.json().catch(() => null);
           if (!response.ok) {
@@ -732,7 +745,12 @@ export default function ProfilePage() {
       if (shouldClearProfileImage && !imageFile?.size) {
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/${userId}/profile-picture`,
-          { method: "DELETE" },
+          {
+            method: "DELETE",
+            headers: {
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            },
+          },
         );
         const result = await response.json().catch(() => null);
         if (!response.ok) {
@@ -750,7 +768,12 @@ export default function ProfilePage() {
       for (const slot of videoSlotsToDelete) {
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/${userId}/profile-videos/${slot}`,
-          { method: "DELETE" },
+          {
+            method: "DELETE",
+            headers: {
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            },
+          },
         );
         const result = await response.json().catch(() => null);
         if (!response.ok) {
@@ -794,7 +817,12 @@ export default function ProfilePage() {
         for (const photoId of deletedSamplePhotoIds) {
           const response = await fetch(
             `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/photo-galleries/${encodeURIComponent(photoId)}`,
-            { method: "DELETE" },
+            {
+              method: "DELETE",
+              headers: {
+                ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+              },
+            },
           );
           const result = await response.json().catch(() => null);
           if (!response.ok) {
@@ -823,6 +851,9 @@ export default function ProfilePage() {
             : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/photo-galleries`;
           const photoResponse = await fetch(endpoint, {
             method: existingPhoto ? "PATCH" : "POST",
+            headers: {
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            },
             body,
           });
           const photoResult = await photoResponse.json().catch(() => null);
@@ -886,6 +917,8 @@ export default function ProfilePage() {
     setIsSavingAvailability(true);
     setAvailabilityMessage("");
     try {
+      const savedUser = window.localStorage.getItem(savedUserKey);
+      const accessToken = savedUser ? JSON.parse(savedUser).accessToken : null;
       const occupiedDates = [...new Set(availabilityDraft)]
         .sort()
         .map((date) => `${date}T00:00:00.000Z`);
@@ -893,7 +926,10 @@ export default function ProfilePage() {
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/${encodeURIComponent(profile._id)}/occupied-dates`,
         {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
           body: JSON.stringify({ occupiedDates }),
         },
       );

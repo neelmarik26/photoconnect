@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Swal from "sweetalert2";
+import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -28,7 +29,23 @@ function getDefaultConfig() {
   };
 }
 
+function getAccessToken() {
+  try {
+    const saved = window.localStorage.getItem("photoConnectUser");
+    if (!saved) return null;
+    const user = JSON.parse(saved);
+    return user.accessToken || null;
+  } catch {
+    return null;
+  }
+}
+
+function handleUnauthorized(router) {
+  router.replace("/admin/security");
+}
+
 export default function GalleryPage() {
+  const router = useRouter();
   const [config, setConfig] = useState(getDefaultConfig());
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -41,7 +58,20 @@ export default function GalleryPage() {
   useEffect(() => {
     async function loadConfig() {
       try {
-        const response = await fetch(`${BACKEND_URL}/api/hero-imgs/config`);
+        const token = getAccessToken();
+        if (!token) {
+          handleUnauthorized(router);
+          return;
+        }
+        const response = await fetch(`${BACKEND_URL}/api/hero-imgs/config`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (response.status === 401) {
+          handleUnauthorized(router);
+          return;
+        }
         if (!response.ok) throw new Error("Failed to load hero configuration");
         const data = await response.json();
         setConfig((prev) => ({
@@ -61,7 +91,7 @@ export default function GalleryPage() {
       }
     }
     loadConfig();
-  }, []);
+  }, [router]);
 
   function showMessage(type, text) {
     setMessage({ type, text });
@@ -92,13 +122,26 @@ export default function GalleryPage() {
     setHeroImagePreviews((prev) => [...prev, ...newPreviews]);
 
     try {
+      const token = getAccessToken();
+      if (!token) {
+        handleUnauthorized(router);
+        return;
+      }
       const formData = new FormData();
       validFiles.forEach((file) => formData.append("files", file));
       
       const response = await fetch(`${BACKEND_URL}/api/hero-imgs/config/images`, {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
         body: formData,
       });
+
+      if (response.status === 401) {
+        handleUnauthorized(router);
+        return;
+      }
 
       if (!response.ok) {
         const error = await response.json();
@@ -137,9 +180,21 @@ export default function GalleryPage() {
     if (!confirmation.isConfirmed) return;
 
     try {
+      const token = getAccessToken();
+      if (!token) {
+        handleUnauthorized(router);
+        return;
+      }
       const response = await fetch(`${BACKEND_URL}/api/hero-imgs/config/images/${index}`, {
         method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       });
+      if (response.status === 401) {
+        handleUnauthorized(router);
+        return;
+      }
       if (!response.ok) throw new Error("Failed to delete hero image from backend");
       const data = await response.json();
       setConfig((prev) => ({
@@ -166,15 +221,27 @@ export default function GalleryPage() {
   async function handleSaveHeroConfig() {
     setIsSaving(true);
     try {
+      const token = getAccessToken();
+      if (!token) {
+        handleUnauthorized(router);
+        return;
+      }
       const response = await fetch(`${BACKEND_URL}/api/hero-imgs/config`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           title: config.hero.title,
           description: config.hero.description,
           script: config.hero.script,
         }),
       });
+      if (response.status === 401) {
+        handleUnauthorized(router);
+        return;
+      }
       if (!response.ok) throw new Error("Failed to save hero section");
       window.dispatchEvent(new CustomEvent("heroConfigChanged", { detail: { hero: config.hero } }));
       showMessage("success", "Hero section text saved!");

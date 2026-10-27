@@ -60,7 +60,11 @@ export default function AdminLayout({ children }) {
   }, [profileMenuOpen]);
 
   useEffect(() => {
+    let isCurrent = true;
     const savedUser = window.localStorage.getItem(savedUserKey);
+    let hasAccess = false;
+    let isSuper = false;
+    let canEdit = false;
 
     if (savedUser) {
       try {
@@ -76,23 +80,32 @@ export default function AdminLayout({ children }) {
           ["ADMIN", "SUPERADMIN"].includes(user.type) &&
           (user.type !== "SUPERADMIN" || user.accountCollection === "admins")
         ) {
-          startTransition(() => {
-            setHasAdminAccess(true);
-            setIsSuperAdmin(
-              user.type === "SUPERADMIN" && user.accountCollection === "admins",
-            );
-            setCanEditAdminProfile(user.accountCollection === "admins");
-          });
+          hasAccess = true;
+          isSuper = user.type === "SUPERADMIN" && user.accountCollection === "admins";
+          canEdit = user.accountCollection === "admins";
         }
       } catch {
         window.localStorage.removeItem(savedUserKey);
       }
     }
+
+    if (isCurrent) {
+      startTransition(() => {
+        setHasAdminAccess(hasAccess);
+        setIsSuperAdmin(isSuper);
+        setCanEditAdminProfile(canEdit);
+      });
+    }
+
     // Only redirect to security page if not already on it and no admin access
-    if (!hasAdminAccess && !isSecurityPage) {
+    if (isCurrent && !hasAccess && !isSecurityPage) {
       router.replace("/admin/security");
     }
-  }, [router, hasAdminAccess, isSecurityPage]);
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [router, isSecurityPage]);
 
   function logout() {
     window.localStorage.removeItem(savedUserKey);

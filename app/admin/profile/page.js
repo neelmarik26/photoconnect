@@ -15,7 +15,27 @@ const profileFields = [
 	["profileImageUrl", "Profile picture URL", "url"],
 ];
 
-async function requestMyProfile(token, options = {}) {
+function getAccessToken() {
+	try {
+		const saved = window.localStorage.getItem(savedUserKey);
+		if (!saved) return null;
+		const user = JSON.parse(saved);
+		return user.accessToken || null;
+	} catch {
+		return null;
+	}
+}
+
+function handleUnauthorized(router) {
+	router.replace("/admin/security");
+}
+
+async function requestMyProfile(router, options = {}) {
+	const token = getAccessToken();
+	if (!token) {
+		handleUnauthorized(router);
+		throw new Error("No access token");
+	}
 	const response = await fetch(
 		`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/admins/me`,
 		{
@@ -26,6 +46,10 @@ async function requestMyProfile(token, options = {}) {
 			},
 		},
 	);
+	if (response.status === 401) {
+		handleUnauthorized(router);
+		throw new Error("Unauthorized");
+	}
 	const result = await response.json().catch(() => null);
 	if (!response.ok) {
 		throw new Error(result?.message || "Could not complete the profile request.");
@@ -60,7 +84,7 @@ export default function AdminProfilePage() {
 			}
 
 			startTransition(() => setAccessToken(user.accessToken));
-			requestMyProfile(user.accessToken)
+			requestMyProfile(router)
 				.then((result) => {
 					if (isCurrent) setProfile(result?.data ?? result);
 				})
@@ -98,7 +122,7 @@ export default function AdminProfilePage() {
 		});
 
 		try {
-			const result = await requestMyProfile(accessToken, {
+			const result = await requestMyProfile(router, {
 				method: "PATCH",
 				body: JSON.stringify(update),
 			});

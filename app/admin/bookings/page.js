@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 
 const statusLabels = {
@@ -53,7 +54,23 @@ function getStatusClass(status) {
   }
 }
 
+function getAccessToken() {
+  try {
+    const saved = window.localStorage.getItem("photoConnectUser");
+    if (!saved) return null;
+    const user = JSON.parse(saved);
+    return user.accessToken || null;
+  } catch {
+    return null;
+  }
+}
+
+function handleUnauthorized(router) {
+  router.replace("/admin/security");
+}
+
 export default function BookingsPage() {
+  const router = useRouter();
   const [bookings, setBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -68,6 +85,11 @@ export default function BookingsPage() {
     setIsLoading(true);
     setError("");
     try {
+      const token = getAccessToken();
+      if (!token) {
+        handleUnauthorized(router);
+        return;
+      }
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: limit.toString(),
@@ -88,9 +110,15 @@ export default function BookingsPage() {
         {
           headers: {
             accept: "*/*",
+            Authorization: `Bearer ${token}`,
           },
         }
       );
+
+      if (response.status === 401) {
+        handleUnauthorized(router);
+        return;
+      }
 
       const result = await response.json().catch(() => null);
 

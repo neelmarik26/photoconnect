@@ -436,6 +436,13 @@
   color: #a9b2b8;
 }
 
+.pastDay {
+  background: #f7f9fa;
+  color: #c9d2d9;
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .calendarLegend {
   display: flex;
   flex-wrap: wrap;
@@ -809,6 +816,181 @@
   min-width: 0;
   padding: 8px;
   font-size: 12px;
+}
+
+.modalCalendar {
+  display: grid;
+  gap: 10px;
+}
+
+.modalDatePicker {
+  display: grid;
+  gap: 12px;
+  border: 1px solid #e4ebef;
+  border-radius: 12px;
+  background: #fbfcfd;
+  padding: 16px;
+}
+
+.modalDatePicker .fieldLabel {
+  color: #263b4a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.modalCalendarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.modalCalendarHeader button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #d4dfe4;
+  border-radius: 6px;
+  background: #fff;
+  color: #263b4a;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.modalCalendarHeader button:hover {
+  border-color: #1878f2;
+  color: #1878f2;
+}
+
+.modalMonthYear {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modalMonthYear select {
+  border: 1px solid #d4dfe4;
+  border-radius: 6px;
+  background: #fff;
+  color: #263b4a;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 8px;
+  cursor: pointer;
+  min-width: 70px;
+}
+
+.modalMonthYear select:hover {
+  border-color: #1878f2;
+}
+
+.modalCalendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-top: 1px solid #e0e7eb;
+  border-left: 1px solid #e0e7eb;
+  text-align: center;
+}
+
+.modalCalendarGrid > * {
+  display: grid;
+  min-height: 34px;
+  place-items: center;
+  border-right: 1px solid #e0e7eb;
+  border-bottom: 1px solid #e0e7eb;
+  font-size: 11px;
+}
+
+.modalCalendarGrid button {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #263b4a;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.modalCalendarGrid button:hover:not(:disabled) {
+  outline: 2px solid #3275e5;
+  outline-offset: -2px;
+}
+
+.modalCalendarGrid button:disabled {
+  cursor: default;
+}
+
+.modalMutedDay {
+  background: #f7f9fa;
+  color: #a9b2b8;
+}
+
+.modalPastDay {
+  background: #f7f9fa;
+  color: #c9d2d9;
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.modalBookedDay {
+  background: #ffdada;
+  color: #8f4646 !important;
+}
+
+.modalSelectedDay {
+  background: #8ebaff;
+  color: #174b9a;
+  font-weight: 700;
+}
+
+.modalAvailableDay {
+  background: #ddf6e9;
+}
+
+.modalSelectedDates {
+  margin-top: 10px;
+  padding: 12px;
+  background: #f0f4ff;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.modalSelectedDates p {
+  margin: 0 0 6px;
+  color: #174b9a;
+  font-weight: 600;
+}
+
+.modalSelectedDates ul {
+  margin: 0;
+  padding-left: 20px;
+  color: #263b4a;
+}
+
+.modalSelectedDates li {
+  margin: 2px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modalRemoveDateBtn {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e0e7eb;
+  border-radius: 4px;
+  background: #fff;
+  color: #9a5550;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modalRemoveDateBtn:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+  color: #ef4444;
 }
 
 .removeDateBtn {

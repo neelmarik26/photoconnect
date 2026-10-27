@@ -62,13 +62,17 @@ export default function PhotographerDetailsPage() {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [modalCalendarMonth, setModalCalendarMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
     const [selectedDates, setSelectedDates] = useState([]);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingForm, setBookingForm] = useState({
     eventDate: [],
     eventLocation: "",
-    durationHours: 4,
-    totalPrice: 600,
+    durationHours: "",
+    totalPrice: "",
     notes: "",
     specialRequirements: "",
   });
@@ -100,6 +104,28 @@ export default function PhotographerDetailsPage() {
       return;
     }
 
+    if (user.type?.toUpperCase() !== "PARTNER") {
+      await Swal.fire({
+        icon: "error",
+        title: "Partner account required",
+        text: "Only partner accounts can book photographers. Please sign in with a partner account.",
+        confirmButtonText: "OK",
+        confirmButtonColor: "#3085d6",
+      });
+      return;
+    }
+
+    if (selectedDates.length === 0) {
+      await Swal.fire({
+        icon: "warning",
+        title: "No date selected",
+        text: "Please select at least one date from the calendar before booking.",
+        confirmButtonText: "OK",
+        confirmButtonColor: "#3085d6",
+      });
+      return;
+    }
+
     setBookingError("");
     setBookingSuccess(false);
     setBookingForm((prev) => ({
@@ -109,6 +135,8 @@ export default function PhotographerDetailsPage() {
       ),
     }));
     setShowBookingModal(true);
+    const now = new Date();
+    setModalCalendarMonth(new Date(now.getFullYear(), now.getMonth(), 1));
   }
 
   useEffect(() => {
@@ -310,7 +338,11 @@ export default function PhotographerDetailsPage() {
       e.preventDefault();
       setBookingError("");
       setBookingSuccess(false);
-      setBookingLoading(true);
+
+      if (bookingForm.eventDate.filter(Boolean).length === 0) {
+        setBookingError("Please select at least one date before booking.");
+        return;
+      }
 
       // Validate no occupied dates in the form
       const hasOccupiedDate = bookingForm.eventDate.some((date) => {
@@ -320,10 +352,10 @@ export default function PhotographerDetailsPage() {
 
       if (hasOccupiedDate) {
         setBookingError("One or more selected dates are already booked. Please choose different dates.");
-        setBookingLoading(false);
         return;
       }
 
+      setBookingLoading(true);
       try {
         const user = JSON.parse(window.localStorage.getItem("photoConnectUser") || "{}");
         if (!user.userId) {
@@ -515,13 +547,22 @@ export default function PhotographerDetailsPage() {
                     ))}
                     {getCalendarCells(calendarMonth).map((cell, index) => {
                       const dateKey = getDateKey(calendarMonth, cell.day);
+                      const cellDate = new Date(
+                        calendarMonth.getFullYear(),
+                        calendarMonth.getMonth(),
+                        cell.day,
+                      );
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const isPast = cellDate < today;
                       const isBooked =
                         cell.currentMonth &&
+                        !isPast &&
                         occupiedDates.some(
                           (date) => String(date).slice(0, 10) === dateKey,
                         );
                       const isSelected =
-                                          cell.currentMonth && selectedDates.includes(dateKey);
+                        cell.currentMonth && selectedDates.includes(dateKey);
 
                       return (
                         <button
@@ -530,31 +571,40 @@ export default function PhotographerDetailsPage() {
                           className={
                             !cell.currentMonth
                               ? styles.mutedDay
-                              : isBooked
-                                ? styles.booked
-                                : isSelected
-                                  ? styles.selectedDay
-                                  : styles.available
+                              : isPast
+                                ? styles.pastDay
+                                : isBooked
+                                  ? styles.booked
+                                  : isSelected
+                                    ? styles.selectedDay
+                                    : styles.available
                           }
                           aria-pressed={isSelected}
-                                            onClick={() => {
-                                              if (!cell.currentMonth || isBooked) return;
-                                              setSelectedDates((prev) => {
-                                                if (prev.includes(dateKey)) {
-                                                  return prev.filter((d) => d !== dateKey);
-                                                }
-                                                if (prev.length >= 3) {
-                                                  return prev;
-                                                }
-                                                return [...prev, dateKey];
-                                              });
-                                            }}
-                                            disabled={!cell.currentMonth || isBooked}
-                                          >
-                                            {cell.day}
-                                          </button>
-                                        );
-                                      })}
+                          onClick={() => {
+                            if (
+                              !cell.currentMonth ||
+                              isBooked ||
+                              isPast
+                            )
+                              return;
+                            setSelectedDates((prev) => {
+                              if (prev.includes(dateKey)) {
+                                return prev.filter((d) => d !== dateKey);
+                              }
+                              if (prev.length >= 3) {
+                                return prev;
+                              }
+                              return [...prev, dateKey];
+                            });
+                          }}
+                          disabled={
+                            !cell.currentMonth || isBooked || isPast
+                          }
+                        >
+                          {cell.day}
+                        </button>
+                      );
+                    })}
                                     </div>
                                     <div className={styles.calendarLegend}>
                                       <span><i className={styles.availableDot} /> Available</span>
@@ -573,7 +623,7 @@ export default function PhotographerDetailsPage() {
                                         </ul>
                                       </div>
                                     )}
-                                    {isPhotographerAccount === false && selectedDates.length > 0 && (
+                                    {isPhotographerAccount === false && (
                                       <button
                                         type="button"
                                         className={styles.bookButton}
@@ -782,81 +832,196 @@ export default function PhotographerDetailsPage() {
                                           <p>Choose up to three possible dates.</p>
                                         </div>
                                       </div>
-                                      <div className={styles.modalField}>
+                                      <div className={styles.modalDatePicker}>
                                         <span className={styles.fieldLabel}>Event date(s) *</span>
-                                        <div className={styles.dateInputs}>
-                                          {bookingForm.eventDate.map((date, idx) => (
-                                            <div key={idx} className={styles.dateInputRow}>
-                                              <label className={styles.dateNumber} htmlFor={`eventDate-${idx}`}>
-                                                {`Date ${idx + 1}`}
-                                              </label>
-                                              <input
-                                                id={`eventDate-${idx}`}
-                                                type="date"
-                                                value={date?.slice(0, 10) || ""}
-                                                onChange={(event) => {
-                                                  const newDate = event.target.value;
-                                                  if (!newDate) return;
-                                                  const isOccupied = occupiedDates.some(
-                                                    (occupiedDate) =>
-                                                      String(occupiedDate).slice(0, 10) === newDate,
-                                                  );
-                                                  if (isOccupied) {
-                                                    setBookingError(
-                                                      `Date ${newDate} is unavailable. Please choose another date.`,
+                                        <div className={styles.modalCalendar}>
+                                          <div className={styles.modalCalendarHeader}>
+                                            <button
+                                              type="button"
+                                              aria-label="Previous month"
+                                              onClick={() =>
+                                                setModalCalendarMonth(
+                                                  new Date(
+                                                    modalCalendarMonth.getFullYear(),
+                                                    modalCalendarMonth.getMonth() - 1,
+                                                    1,
+                                                  ),
+                                                )
+                                              }
+                                            >
+                                              ‹
+                                            </button>
+                                            <div className={styles.modalMonthYear}>
+                                              <select
+                                                aria-label="Select month"
+                                                value={String(modalCalendarMonth.getMonth() + 1)}
+                                                onChange={(e) => {
+                                                  const m = parseInt(e.target.value, 10);
+                                                  if (!isNaN(m) && m >= 1 && m <= 12) {
+                                                    setModalCalendarMonth(
+                                                      new Date(
+                                                        modalCalendarMonth.getFullYear(),
+                                                        m - 1,
+                                                        1,
+                                                      ),
                                                     );
-                                                    return;
                                                   }
-                                                  const isoDate = new Date(
-                                                    `${newDate}T10:00:00.000Z`,
-                                                  ).toISOString();
-                                                  setBookingForm((prev) => ({
-                                                    ...prev,
-                                                    eventDate: prev.eventDate.map(
-                                                      (currentDate, index) =>
-                                                        index === idx ? isoDate : currentDate,
-                                                    ),
-                                                  }));
-                                                  setBookingError("");
                                                 }}
-                                                required
-                                                min={new Date().toISOString().slice(0, 10)}
-                                              />
-                                              {bookingForm.eventDate.length > 1 && (
+                                              >
+                                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((m) => (
+                                                  <option key={m} value={m}>
+                                                    {new Date(2000, m - 1, 1).toLocaleDateString("en-US", {
+                                                      month: "short",
+                                                    })}
+                                                  </option>
+                                                ))}
+                                              </select>
+                                              <select
+                                                aria-label="Select year"
+                                                value={String(modalCalendarMonth.getFullYear())}
+                                                onChange={(e) => {
+                                                  const y = parseInt(e.target.value, 10);
+                                                  if (!isNaN(y) && y >= 1900 && y <= 2100) {
+                                                    setModalCalendarMonth(
+                                                      new Date(y, modalCalendarMonth.getMonth(), 1),
+                                                    );
+                                                  }
+                                                }}
+                                              >
+                                                {[...Array(201).keys()].map((i) => {
+                                                  const y = 1900 + i;
+                                                  return <option key={y} value={y}>{y}</option>;
+                                                })}
+                                              </select>
+                                            </div>
+                                            <button
+                                              type="button"
+                                              aria-label="Next month"
+                                              onClick={() =>
+                                                setModalCalendarMonth(
+                                                  new Date(
+                                                    modalCalendarMonth.getFullYear(),
+                                                    modalCalendarMonth.getMonth() + 1,
+                                                    1,
+                                                  ),
+                                                )
+                                              }
+                                            >
+                                              ›
+                                            </button>
+                                          </div>
+                                          <div className={styles.modalCalendarGrid}>
+                                            {weekdays.map((day) => (
+                                              <b key={day}>{day}</b>
+                                            ))}
+                                            {getCalendarCells(modalCalendarMonth).map((cell, index) => {
+                                              const dateKey = getDateKey(modalCalendarMonth, cell.day);
+                                              const cellDate = new Date(
+                                                modalCalendarMonth.getFullYear(),
+                                                modalCalendarMonth.getMonth(),
+                                                cell.day,
+                                              );
+                                              const today = new Date();
+                                              today.setHours(0, 0, 0, 0);
+                                              const isPast = cellDate < today;
+                                              const isSelected = bookingForm.eventDate.some(
+                                                (d) => String(d).slice(0, 10) === dateKey,
+                                              );
+                                              const isOccupied = occupiedDates.some(
+                                                (date) => String(date).slice(0, 10) === dateKey,
+                                              );
+                                              const isDisabled = isPast || isOccupied || !cell.currentMonth;
+
+                                              return (
                                                 <button
                                                   type="button"
-                                                  className={styles.removeDateBtn}
+                                                  key={`${cell.day}-${index}`}
+                                                  className={
+                                                    !cell.currentMonth
+                                                      ? styles.modalMutedDay
+                                                      : isPast
+                                                        ? styles.modalPastDay
+                                                        : isOccupied
+                                                          ? styles.modalBookedDay
+                                                          : isSelected
+                                                            ? styles.modalSelectedDay
+                                                            : styles.modalAvailableDay
+                                                  }
+                                                  aria-pressed={isSelected}
                                                   onClick={() => {
+                                                    if (isDisabled) return;
+                                                    if (isSelected) {
+                                                      if (bookingForm.eventDate.length <= 1) {
+                                                        setBookingError("At least one date is required.");
+                                                        return;
+                                                      }
+                                                      setBookingForm((prev) => ({
+                                                        ...prev,
+                                                        eventDate: prev.eventDate.filter(
+                                                          (d) =>
+                                                            String(d).slice(0, 10) !==
+                                                            dateKey,
+                                                        ),
+                                                      }));
+                                                      setBookingError("");
+                                                      return;
+                                                    }
+                                                    if (bookingForm.eventDate.length >= 3) return;
                                                     setBookingForm((prev) => ({
                                                       ...prev,
-                                                      eventDate: prev.eventDate.filter(
-                                                        (_, index) => index !== idx,
-                                                      ),
+                                                      eventDate: [
+                                                        ...prev.eventDate,
+                                                        new Date(`${dateKey}T10:00:00.000Z`).toISOString(),
+                                                      ],
                                                     }));
+                                                    setBookingError("");
                                                   }}
-                                                  aria-label={`Remove date ${idx + 1}`}
+                                                  disabled={isDisabled}
                                                 >
-                                                  ×
+                                                  {cell.day}
                                                 </button>
-                                              )}
+                                              );
+                                            })}
+                                          </div>
+                                          {bookingForm.eventDate.length > 0 && (
+                                            <div className={styles.modalSelectedDates}>
+                                              <p>Selected dates:</p>
+                                              <ul>
+                                                {bookingForm.eventDate.map((date, idx) => {
+                                                  const label = new Date(date).toLocaleDateString();
+                                                  return (
+                                                    <li key={idx}>
+                                                      {label}
+                                                      <button
+                                                        type="button"
+                                                        className={styles.modalRemoveDateBtn}
+                                                        onClick={() => {
+                                                          if (bookingForm.eventDate.length <= 1) {
+                                                            setBookingError("At least one date is required.");
+                                                            return;
+                                                          }
+                                                          setBookingForm((prev) => ({
+                                                            ...prev,
+                                                            eventDate: prev.eventDate.filter(
+                                                              (_, i) => i !== idx,
+                                                            ),
+                                                          }));
+                                                          setBookingError("");
+                                                        }}
+                                                        aria-label={`Remove ${label}`}
+                                                      >
+                                                        ×
+                                                      </button>
+                                                    </li>
+                                                  );
+                                                })}
+                                              </ul>
                                             </div>
-                                          ))}
+                                          )}
+                                          {bookingForm.eventDate.length < 3 && (
+                                            <small>You can select up to 3 dates. Unavailable dates cannot be selected.</small>
+                                          )}
                                         </div>
-                                        {bookingForm.eventDate.length < 3 && (
-                                          <button
-                                            type="button"
-                                            className={styles.addDateBtn}
-                                            onClick={() => {
-                                              setBookingForm((prev) => ({
-                                                ...prev,
-                                                eventDate: [...prev.eventDate, ""],
-                                              }));
-                                            }}
-                                          >
-                                            + Add another date
-                                          </button>
-                                        )}
-                                        <small>Unavailable dates cannot be selected.</small>
                                       </div>
                                     </section>
 

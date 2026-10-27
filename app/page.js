@@ -53,10 +53,9 @@ export default function Home() {
   const [photographersLoading, setPhotographersLoading] = useState(true);
   const [photographersError, setPhotographersError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-    const [selectedDistrict, setSelectedDistrict] = useState("");
-    const [selectedCity, setSelectedCity] = useState("");
-    const [allPhotographers, setAllPhotographers] = useState([]);
-    const [heroConfig, setHeroConfig] = useState({
+  const [selectedDistrict, setSelectedDistrict] = useState("");
+  const [selectedCity, setSelectedCity] = useState("");
+  const [heroConfig, setHeroConfig] = useState({
     images: [],
     title: "Find the Perfect\nPhotographer for Your Event",
     description: "Talented. Trusted. Available.",
@@ -191,37 +190,58 @@ export default function Home() {
 
   useEffect(() => {
     let isCurrent = true;
-    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/photographers?page=1&limit=100`)
-      .then(async (response) => {
+    let controller;
+    const timeoutId = setTimeout(async () => {
+      controller = new AbortController();
+      setPhotographersLoading(true);
+      setPhotographersError("");
+
+      const params = new URLSearchParams({ page: "1", limit: "100" });
+      if (searchTerm.trim()) params.set("search", searchTerm.trim());
+      if (selectedDistrict) {
+        params.set("district", selectedDistrict);
+        const districtCities = WEST_BENGAL_CITIES_BY_DISTRICT[selectedDistrict] || [];
+        if (districtCities.length) {
+          params.set(
+            "districtCities",
+            districtCities.map((city) => city.value).join(","),
+          );
+        }
+      }
+      if (selectedCity) params.set("city", selectedCity);
+
+      try {
+        const response = await fetch(
+          `${BACKEND_URL}/api/photographers?${params.toString()}`,
+          { signal: controller.signal },
+        );
         const result = await response.json().catch(() => null);
         if (!response.ok) {
           throw new Error(result?.message || "Could not load photographers.");
         }
-        return result;
-      })
-      .then((result) => {
+
         if (isCurrent) {
           const users = Array.isArray(result?.data) ? result.data : [];
-            const mappedPhotographers = users
-              .filter((user) => user.status === "active")
-              .map(mapPhotographer);
-            setAllPhotographers(mappedPhotographers);
-            setPhotographers(mappedPhotographers);
-          }
-        })
-        .catch((error) => {
-          if (isCurrent) {
-            setPhotographersError(error.message || "Could not load photographers.");
-          }
-        })
-        .finally(() => {
-          if (isCurrent) setPhotographersLoading(false);
-        });
+          setPhotographers(
+            users.filter((user) => user.status === "active").map(mapPhotographer),
+          );
+        }
+      } catch (error) {
+        if (isCurrent && error.name !== "AbortError") {
+          setPhotographersError(error.message || "Could not load photographers.");
+          setPhotographers([]);
+        }
+      } finally {
+        if (isCurrent) setPhotographersLoading(false);
+      }
+    }, 300);
 
-      return () => {
-        isCurrent = false;
-      };
-    }, []);
+    return () => {
+      isCurrent = false;
+      clearTimeout(timeoutId);
+      controller?.abort();
+    };
+  }, [searchTerm, selectedDistrict, selectedCity]);
 
   function handleHeroPointerDown(event) {
     swipeStartX.current = null;
@@ -251,9 +271,7 @@ export default function Home() {
   }
 
   const handleSearchChange = (e) => {
-    const value = e.target.value;
-    setSearchTerm(value);
-    console.log("Search input:", value);
+    setSearchTerm(e.target.value);
   };
 
   const handleClearFilters = () => {
@@ -262,51 +280,14 @@ export default function Home() {
     setSelectedCity("");
   };
 
-    const handleDistrictChange = (e) => {
-      const value = e.target.value;
-      setSelectedDistrict(value);
-      setSelectedCity(""); // Reset city when district changes
-    };
+  const handleDistrictChange = (e) => {
+    setSelectedDistrict(e.target.value);
+    setSelectedCity("");
+  };
 
-    const handleCityChange = (e) => {
-      const value = e.target.value;
-      setSelectedCity(value);
-    };
-
-    // Filter photographers based on search term, district, and city
-    useEffect(() => {
-      let filtered = allPhotographers;
-
-      // Filter by search term
-      if (searchTerm.trim()) {
-        const term = searchTerm.toLowerCase().trim();
-        filtered = filtered.filter(
-          (p) =>
-            p.name.toLowerCase().includes(term) ||
-            p.location.toLowerCase().includes(term) ||
-            p.tags.some((tag) => tag.toLowerCase().includes(term))
-        );
-      }
-
-      // Filter by district
-      if (selectedDistrict) {
-        filtered = filtered.filter((p) => {
-          // Check if the photographer's city is in the selected district
-          const citiesInDistrict = WEST_BENGAL_CITIES_BY_DISTRICT[selectedDistrict] || [];
-          const cityValues = citiesInDistrict.map((c) => c.value);
-          return cityValues.includes(p.city?.toLowerCase().replace(/\s+/g, "_"));
-        });
-      }
-
-      // Filter by city
-      if (selectedCity) {
-        filtered = filtered.filter((p) =>
-          p.city?.toLowerCase().replace(/\s+/g, "_") === selectedCity
-        );
-      }
-
-      setPhotographers(filtered);
-    }, [searchTerm, selectedDistrict, selectedCity, allPhotographers]);
+  const handleCityChange = (e) => {
+    setSelectedCity(e.target.value);
+  };
 
   return (
     <main id="home" className={styles.page}>
@@ -540,8 +521,8 @@ export default function Home() {
           </div>
         ) : (
           <p id="photographer-listings" className={styles.photographerState}>
-            {photographers.length > 0
-              ? "No photographers match your filters."
+            {searchTerm.trim() || selectedDistrict || selectedCity
+              ? "No photographers match your search or filters."
               : "No photographer profiles are available yet."}
           </p>
         )}

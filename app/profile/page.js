@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ReactTags } from "react-tag-autocomplete";
 import Swal from "sweetalert2";
 import Navbar from "../components/Navbar";
+import { WEST_BENGAL_DISTRICTS } from "../constants/location";
 import styles from "./page.module.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -38,6 +39,7 @@ const editableSections = [
     fields: [
       ["country", "Country", "text"],
       ["state", "State", "text"],
+      ["district", "District", "select"],
       ["city", "City", "text"],
       ["address1", "Address 1", "text"],
       ["address2", "Address 2", "text"],
@@ -71,6 +73,7 @@ const profileSections = [
     fields: [
       ["country", "Country"],
       ["state", "State"],
+      ["district", "District"],
       ["city", "City"],
       ["address1", "Address 1"],
       ["address2", "Address 2"],
@@ -118,6 +121,16 @@ function formatValue(field, value) {
   if (value === null || value === undefined || value === "") {
     return "Not provided";
   }
+  if (field === "district") {
+    const districtValue = String(value).trim();
+    const normalizedDistrict = districtValue.toLowerCase().replace(/[\s-]+/g, "_");
+    const matchingDistrict = WEST_BENGAL_DISTRICTS.find(
+      (district) =>
+        district.value === normalizedDistrict ||
+        district.label.toLowerCase() === districtValue.toLowerCase(),
+    );
+    return matchingDistrict?.label ?? districtValue;
+  }
   if (Array.isArray(value)) {
     return value.length ? value.join(", ") : "Not provided";
   }
@@ -158,6 +171,16 @@ function SpecialtyTags({ value }) {
 }
 
 function getEditValue(profile, field) {
+  if (field === "district") {
+    const currentDistrict = String(profile.district ?? "").trim();
+    const normalizedDistrict = currentDistrict.toLowerCase().replace(/[\s-]+/g, "_");
+    const matchingDistrict = WEST_BENGAL_DISTRICTS.find(
+      (district) =>
+        district.value === normalizedDistrict ||
+        district.label.toLowerCase() === currentDistrict.toLowerCase(),
+    );
+    return matchingDistrict?.value ?? currentDistrict;
+  }
   if (field === "specialties") {
     return Array.isArray(profile.specialties)
       ? profile.specialties.join(", ")
@@ -594,6 +617,7 @@ export default function ProfilePage() {
       phone: value("phone"),
       country: value("country"),
       state: value("state"),
+      district: value("district"),
       city: value("city"),
       address1: value("address1"),
       address2: value("address2"),
@@ -1262,6 +1286,28 @@ export default function ProfilePage() {
                             readOnly
                             aria-readonly="true"
                           />
+                        ) : field === "district" ? (
+                          <select
+                            id={field}
+                            name={field}
+                            defaultValue={getEditValue(profile, field)}
+                          >
+                            <option value="">Select district</option>
+                            {getEditValue(profile, field) &&
+                              !WEST_BENGAL_DISTRICTS.some(
+                                (district) =>
+                                  district.value === getEditValue(profile, field),
+                              ) && (
+                                <option value={getEditValue(profile, field)}>
+                                  {getEditValue(profile, field)}
+                                </option>
+                              )}
+                            {WEST_BENGAL_DISTRICTS.map((district) => (
+                              <option key={district.value} value={district.value}>
+                                {district.label}
+                              </option>
+                            ))}
+                          </select>
                         ) : (
                           <input
                             id={field}

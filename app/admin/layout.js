@@ -77,12 +77,11 @@ export default function AdminLayout({ children }) {
         if (
           user.userId &&
           user.expiresAt > Date.now() &&
-          ["ADMIN", "SUPERADMIN"].includes(user.type) &&
-          (user.type !== "SUPERADMIN" || user.accountCollection === "admins")
+          ["ADMIN", "SUPERADMIN"].includes(user.type)
         ) {
           hasAccess = true;
-          isSuper = user.type === "SUPERADMIN" && user.accountCollection === "admins";
-          canEdit = user.accountCollection === "admins";
+          isSuper = user.type === "SUPERADMIN";
+          canEdit = user.type === "SUPERADMIN" || user.accountCollection === "admins";
         }
       } catch {
         window.localStorage.removeItem(savedUserKey);
@@ -133,7 +132,7 @@ export default function AdminLayout({ children }) {
         </div>
         <nav className={styles.navigation} aria-label="Admin navigation">
           {navigation
-            .filter(([key]) => key !== "admins" || isSuperAdmin)
+            .filter(([key]) => key !== "admins" || isSuperAdmin || canEditAdminProfile)
             .map(([key, label, icon]) => {
               const href = key === "dashboard"
                 ? "/admin/dashboard"

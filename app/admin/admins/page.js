@@ -66,17 +66,16 @@ export default function AdminsPage() {
 		try {
 			const user = JSON.parse(window.localStorage.getItem(savedUserKey) || "null");
 			if (
-				!user?.userId ||
-				user.type !== "SUPERADMIN" ||
-				user.accountCollection !== "admins" ||
-				user.expiresAt <= Date.now() ||
-				!user.accessToken
-			) {
-				router.replace("/admin/security");
-				return () => {
-					isCurrent = false;
-				};
-			}
+					!user?.userId ||
+					!["ADMIN", "SUPERADMIN"].includes(user.type) ||
+					user.expiresAt <= Date.now() ||
+					!user.accessToken
+				) {
+					router.replace("/admin/security");
+					return () => {
+						isCurrent = false;
+					};
+				}
 
 			startTransition(() => setAccessToken(user.accessToken));
 			adminRequest("", router)

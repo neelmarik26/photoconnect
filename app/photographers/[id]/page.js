@@ -87,15 +87,15 @@ export default function PhotographerDetailsPage() {
     if (!user?.userId) {
       const result = await Swal.fire({
         icon: "info",
-        title: "Sign up to book",
-        text: "Please create an account before booking a photographer.",
+        title: "Sign in to book",
+        text: "Please sign in to your account before booking a photographer.",
         confirmButtonText: "Continue",
         showCancelButton: true,
         cancelButtonText: "Cancel",
         confirmButtonColor: "#3085d6",
       });
       if (result.isConfirmed) {
-        router.push("/signup");
+        router.push("/signin");
       }
       return;
     }

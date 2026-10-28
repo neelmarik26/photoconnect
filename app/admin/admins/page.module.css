@@ -115,6 +115,12 @@
   color: #8796a2;
 }
 
+.searchIcon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+}
+
 .search input {
   width: 100%;
   min-width: 0;

@@ -191,7 +191,10 @@ export default function AdminsPage() {
 						<header className={styles.directoryHeader}>
 							<div><h2>Admin accounts</h2><p>{filteredAdmins.length} accounts shown</p></div>
 							<label className={styles.search}>
-								<span aria-hidden="true">âŒ•</span>
+								<svg className={styles.searchIcon} viewBox="0 0 24 24" aria-hidden="true">
+									<circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" strokeWidth="2" />
+									<path d="m16 16 4 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+								</svg>
 								<input
 									type="search"
 									value={searchTerm}

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { ReactTags } from "react-tag-autocomplete";
 import Swal from "sweetalert2";
 import Navbar from "../components/Navbar";
+import { WEST_BENGAL_DISTRICTS } from "../constants/location";
 import styles from "./page.module.css";
 
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
@@ -38,6 +39,7 @@ const editableSections = [
     fields: [
       ["country", "Country", "text"],
       ["state", "State", "text"],
+      ["district", "District", "select"],
       ["city", "City", "text"],
       ["address1", "Address 1", "text"],
       ["address2", "Address 2", "text"],
@@ -71,6 +73,7 @@ const profileSections = [
     fields: [
       ["country", "Country"],
       ["state", "State"],
+      ["district", "District"],
       ["city", "City"],
       ["address1", "Address 1"],
       ["address2", "Address 2"],
@@ -118,6 +121,16 @@ function formatValue(field, value) {
   if (value === null || value === undefined || value === "") {
     return "Not provided";
   }
+  if (field === "district") {
+    const districtValue = String(value).trim();
+    const normalizedDistrict = districtValue.toLowerCase().replace(/[\s-]+/g, "_");
+    const matchingDistrict = WEST_BENGAL_DISTRICTS.find(
+      (district) =>
+        district.value === normalizedDistrict ||
+        district.label.toLowerCase() === districtValue.toLowerCase(),
+    );
+    return matchingDistrict?.label ?? districtValue;
+  }
   if (Array.isArray(value)) {
     return value.length ? value.join(", ") : "Not provided";
   }
@@ -158,6 +171,16 @@ function SpecialtyTags({ value }) {
 }
 
 function getEditValue(profile, field) {
+  if (field === "district") {
+    const currentDistrict = String(profile.district ?? "").trim();
+    const normalizedDistrict = currentDistrict.toLowerCase().replace(/[\s-]+/g, "_");
+    const matchingDistrict = WEST_BENGAL_DISTRICTS.find(
+      (district) =>
+        district.value === normalizedDistrict ||
+        district.label.toLowerCase() === currentDistrict.toLowerCase(),
+    );
+    return matchingDistrict?.value ?? currentDistrict;
+  }
   if (field === "specialties") {
     return Array.isArray(profile.specialties)
       ? profile.specialties.join(", ")
@@ -594,6 +617,7 @@ export default function ProfilePage() {
       phone: value("phone"),
       country: value("country"),
       state: value("state"),
+      district: value("district"),
       city: value("city"),
       address1: value("address1"),
       address2: value("address2"),
@@ -653,8 +677,16 @@ export default function ProfilePage() {
     const savedProfileParts = [];
     try {
       const userId = encodeURIComponent(profile._id);
+      const savedUser = window.localStorage.getItem(savedUserKey);
+      const accessToken = savedUser ? JSON.parse(savedUser).accessToken : null;
       const updateProfile = async (url, options) => {
-        const response = await fetch(url, options);
+        const response = await fetch(url, {
+          ...options,
+          headers: {
+            ...options.headers,
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+        });
         const result = await response.json().catch(() => null);
         if (!response.ok) {
           throw new Error(result?.message || "Could not save profile changes.");
@@ -680,7 +712,12 @@ export default function ProfilePage() {
         if (shouldClearProfileImage) {
           const response = await fetch(
             `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/${userId}/profile-picture`,
-            { method: "DELETE" },
+            {
+              method: "DELETE",
+              headers: {
+                ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+              },
+            },
           );
           const result = await response.json().catch(() => null);
           if (!response.ok) {
@@ -708,7 +745,12 @@ export default function ProfilePage() {
       if (shouldClearProfileImage && !imageFile?.size) {
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/${userId}/profile-picture`,
-          { method: "DELETE" },
+          {
+            method: "DELETE",
+            headers: {
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            },
+          },
         );
         const result = await response.json().catch(() => null);
         if (!response.ok) {
@@ -726,7 +768,12 @@ export default function ProfilePage() {
       for (const slot of videoSlotsToDelete) {
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/${userId}/profile-videos/${slot}`,
-          { method: "DELETE" },
+          {
+            method: "DELETE",
+            headers: {
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            },
+          },
         );
         const result = await response.json().catch(() => null);
         if (!response.ok) {
@@ -770,7 +817,12 @@ export default function ProfilePage() {
         for (const photoId of deletedSamplePhotoIds) {
           const response = await fetch(
             `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/photo-galleries/${encodeURIComponent(photoId)}`,
-            { method: "DELETE" },
+            {
+              method: "DELETE",
+              headers: {
+                ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+              },
+            },
           );
           const result = await response.json().catch(() => null);
           if (!response.ok) {
@@ -799,6 +851,9 @@ export default function ProfilePage() {
             : `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/photo-galleries`;
           const photoResponse = await fetch(endpoint, {
             method: existingPhoto ? "PATCH" : "POST",
+            headers: {
+              ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+            },
             body,
           });
           const photoResult = await photoResponse.json().catch(() => null);
@@ -862,6 +917,8 @@ export default function ProfilePage() {
     setIsSavingAvailability(true);
     setAvailabilityMessage("");
     try {
+      const savedUser = window.localStorage.getItem(savedUserKey);
+      const accessToken = savedUser ? JSON.parse(savedUser).accessToken : null;
       const occupiedDates = [...new Set(availabilityDraft)]
         .sort()
         .map((date) => `${date}T00:00:00.000Z`);
@@ -869,7 +926,10 @@ export default function ProfilePage() {
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/${encodeURIComponent(profile._id)}/occupied-dates`,
         {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
           body: JSON.stringify({ occupiedDates }),
         },
       );
@@ -1262,6 +1322,28 @@ export default function ProfilePage() {
                             readOnly
                             aria-readonly="true"
                           />
+                        ) : field === "district" ? (
+                          <select
+                            id={field}
+                            name={field}
+                            defaultValue={getEditValue(profile, field)}
+                          >
+                            <option value="">Select district</option>
+                            {getEditValue(profile, field) &&
+                              !WEST_BENGAL_DISTRICTS.some(
+                                (district) =>
+                                  district.value === getEditValue(profile, field),
+                              ) && (
+                                <option value={getEditValue(profile, field)}>
+                                  {getEditValue(profile, field)}
+                                </option>
+                              )}
+                            {WEST_BENGAL_DISTRICTS.map((district) => (
+                              <option key={district.value} value={district.value}>
+                                {district.label}
+                              </option>
+                            ))}
+                          </select>
                         ) : (
                           <input
                             id={field}

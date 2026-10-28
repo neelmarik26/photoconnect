@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import styles from "./page.module.css";
 
@@ -56,7 +57,23 @@ function getStatusClass(status) {
   }
 }
 
+function getAccessToken() {
+  try {
+    const saved = window.localStorage.getItem("photoConnectUser");
+    if (!saved) return null;
+    const user = JSON.parse(saved);
+    return user.accessToken || null;
+  } catch {
+    return null;
+  }
+}
+
+function handleUnauthorized(router) {
+  router.replace("/admin/security");
+}
+
 export default function BookingsPage() {
+  const router = useRouter();
   const [bookings, setBookings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -73,6 +90,11 @@ export default function BookingsPage() {
     setIsLoading(true);
     setError("");
     try {
+      const token = getAccessToken();
+      if (!token) {
+        handleUnauthorized(router);
+        return;
+      }
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: limit.toString(),
@@ -88,8 +110,6 @@ export default function BookingsPage() {
         params.append("status", statusFilter);
       }
 
-      const savedUser = JSON.parse(window.localStorage.getItem(savedUserKey) || "null");
-      const token = savedUser?.accessToken;
       const [response, statsResponse] = await Promise.all([
         fetch(
           `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/bookings?${params.toString()}`,
@@ -108,10 +128,15 @@ export default function BookingsPage() {
         }),
       ]);
 
+      if (response.status === 401 || statsResponse.status === 401) {
+        handleUnauthorized(router);
+        return;
+      }
       const [result, statsResult] = await Promise.all([
         response.json().catch(() => null),
         statsResponse.json().catch(() => null),
       ]);
+
 
       if (!response.ok) {
         throw new Error(result?.message || "Could not load bookings.");
@@ -133,7 +158,7 @@ export default function BookingsPage() {
       } finally {
         if (isActive()) setIsLoading(false);
       }
-    }, [currentPage, searchTerm, statusFilter]);
+    }, [currentPage, searchTerm, statusFilter, router]);
 
   useEffect(() => {
     let isCurrent = true;

@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 
 const statusLabels = {
@@ -44,7 +45,23 @@ function mapPhotographer(user) {
   };
 }
 
+function getAccessToken() {
+  try {
+    const saved = window.localStorage.getItem("photoConnectUser");
+    if (!saved) return null;
+    const user = JSON.parse(saved);
+    return user.accessToken || null;
+  } catch {
+    return null;
+  }
+}
+
+function handleUnauthorized(router) {
+  router.replace("/admin/security");
+}
+
 export default function AdminPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("Pending");
   const [photographers, setPhotographers] = useState([]);
   const [isLoadingPhotographers, setIsLoadingPhotographers] = useState(true);
@@ -55,10 +72,26 @@ export default function AdminPage() {
 
   useEffect(() => {
     let isCurrent = true;
+    const token = getAccessToken();
+    if (!token) {
+      router.replace("/admin/security");
+      return () => {
+        isCurrent = false;
+      };
+    }
     fetch(
       `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users?type=PHOTOGRAPHER&page=1&limit=100&sortBy=createdAt&sortOrder=desc`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
     )
       .then(async (response) => {
+        if (response.status === 401) {
+          handleUnauthorized(router);
+          return null;
+        }
         const result = await response.json().catch(() => null);
         if (!response.ok) {
           throw new Error(
@@ -68,6 +101,7 @@ export default function AdminPage() {
         return result;
       })
       .then((result) => {
+        if (!result) return;
         if (isCurrent) {
           const users = Array.isArray(result?.data) ? result.data : [];
           setPhotographers(users.map(mapPhotographer));
@@ -87,7 +121,7 @@ export default function AdminPage() {
     return () => {
       isCurrent = false;
     };
-  }, []);
+  }, [router]);
 
   const filteredPhotographers = photographers.filter((photographer) => {
     const matchesTab = photographer.status === activeTab;
@@ -105,16 +139,28 @@ export default function AdminPage() {
     setSavingPhotographerId(id);
     setStatusError("");
     try {
+      const token = getAccessToken();
+      if (!token) {
+        router.replace("/admin/security");
+        return;
+      }
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/${encodeURIComponent(id)}/status`,
         {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({
             status: status === "Approved" ? "active" : "inactive",
           }),
         },
       );
+      if (response.status === 401) {
+        handleUnauthorized(router);
+        return;
+      }
       const result = await response.json().catch(() => null);
       if (!response.ok) {
         throw new Error(result?.message || "Could not update photographer status.");

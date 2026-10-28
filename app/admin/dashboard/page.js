@@ -2,22 +2,40 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
-async function fetchJson(path) {
-  let token = "";
+function getAccessToken() {
   try {
-    const savedUser = JSON.parse(window.localStorage.getItem("photoConnectUser") || "null");
-    token = savedUser?.accessToken || "";
+    const saved = window.localStorage.getItem("photoConnectUser");
+    if (!saved) return null;
+    const user = JSON.parse(saved);
+    return user.accessToken || null;
   } catch {
-    window.localStorage.removeItem("photoConnectUser");
+    return null;
+  }
+}
+
+function handleUnauthorized(router) {
+  router.replace("/admin/security");
+}
+
+async function fetchJson(path, router) {
+  const token = getAccessToken();
+  if (!token) {
+    handleUnauthorized(router);
+    throw new Error("No access token");
+  }
+  const response = await fetch(`${BACKEND_URL}/api/${path}`, {
+    headers: { Authorization: "Bearer " + token },
+  });
+  if (response.status === 401) {
+    handleUnauthorized(router);
+    throw new Error("Unauthorized");
   }
 
-  const response = await fetch(`${BACKEND_URL}/api/${path}`, {
-    headers: token ? { Authorization: 'Bearer ' + token } : {},
-  });
   const result = await response.json().catch(() => null);
   if (!response.ok) {
     throw new Error(result?.message || `Could not load ${path}.`);
@@ -42,6 +60,7 @@ function formatDate(value) {
 }
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const [stats, setStats] = useState(null);
   const [recentPhotographers, setRecentPhotographers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -50,13 +69,13 @@ export default function AdminDashboardPage() {
 
   const loadDashboard = useCallback(async () => {
     const requests = await Promise.allSettled([
-      fetchJson("users?page=1&limit=1"),
-      fetchJson("users?type=PHOTOGRAPHER&page=1&limit=1000&sortBy=createdAt&sortOrder=desc"),
-      fetchJson("bookings/stats"),
-      fetchJson("partner-companies"),
-      fetchJson("photo-galleries?page=1&limit=1"),
-      fetchJson("reviews?page=1&limit=1"),
-      fetchJson("hero-imgs/config"),
+      fetchJson("users?page=1&limit=1", router),
+      fetchJson("users?type=PHOTOGRAPHER&page=1&limit=1000&sortBy=createdAt&sortOrder=desc", router),
+      fetchJson("bookings/stats", router),
+      fetchJson("partner-companies", router),
+      fetchJson("photo-galleries?page=1&limit=1", router),
+      fetchJson("reviews?page=1&limit=1", router),
+      fetchJson("hero-imgs/config", router),
     ]);
 
     const valueAt = (index) => requests[index].status === "fulfilled" ? requests[index].value : null;
@@ -98,7 +117,7 @@ export default function AdminDashboardPage() {
     }
     setLastUpdated(new Date());
     setIsLoading(false);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     Promise.resolve().then(loadDashboard);

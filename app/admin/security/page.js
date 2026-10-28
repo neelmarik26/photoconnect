@@ -1,17 +1,39 @@
 "use client";
 
+import { useEffect } from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "../../auth.module.css";
 import Navbar from "../../components/Navbar";
 
 const adminRoles = ["ADMIN", "SUPERADMIN"];
+const savedUserKey = "photoConnectUser";
 
 export default function AdminSecurityPage() {
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    const savedUser = window.localStorage.getItem(savedUserKey);
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        if (
+          user.userId &&
+          user.expiresAt > Date.now() &&
+          adminRoles.includes(user.type) &&
+          user.accessToken
+        ) {
+          router.replace("/admin/dashboard");
+          return;
+        }
+      } catch {
+        window.localStorage.removeItem(savedUserKey);
+      }
+    }
+  }, [router]);
 
   async function submitCredentials(event) {
     event.preventDefault();

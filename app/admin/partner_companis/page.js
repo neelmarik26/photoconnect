@@ -7,16 +7,42 @@ import styles from "./page.module.css";
 
 const savedUserKey = "photoConnectUser";
 
-async function requestPartnerApi(path = "", options = {}) {
+function getAccessToken() {
+  try {
+    const saved = window.localStorage.getItem(savedUserKey);
+    if (!saved) return null;
+    const user = JSON.parse(saved);
+    return user.accessToken || null;
+  } catch {
+    return null;
+  }
+}
+
+function handleUnauthorized(router) {
+  router.replace("/admin/security");
+}
+
+async function requestPartnerApi(path = "", options = {}, router) {
+	const token = getAccessToken();
+	if (!token) {
+		handleUnauthorized(router);
+		throw new Error("No access token");
+	}
 	const response = await fetch(
 		`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/partner-companies${path}`,
 		{
 			...options,
-			headers: options.body
-				? { "Content-Type": "application/json", ...options.headers }
-				: options.headers,
+			headers: {
+				Authorization: `Bearer ${token}`,
+				...options.headers,
+				...(options.body ? { "Content-Type": "application/json" } : {}),
+			},
 		},
 	);
+	if (response.status === 401) {
+		handleUnauthorized(router);
+		throw new Error("Unauthorized");
+	}
 	const result = await response.json().catch(() => null);
 	if (!response.ok) {
 		throw new Error(result?.message || "Could not complete the company request.");
@@ -74,7 +100,7 @@ export default function PartnerCompaniesPage() {
 		}
 
 		startTransition(() => setHasAdminAccess(true));
-		requestPartnerApi()
+		requestPartnerApi("", {}, router)
 			.then((result) => {
 				if (isCurrent) {
 					setPartners(
@@ -143,6 +169,7 @@ export default function PartnerCompaniesPage() {
 					method: editingPartner ? "PATCH" : "POST",
 					body: JSON.stringify(nextPartner),
 				},
+				router,
 			);
 			const savedPartner = mapPartnerCompany(result?.data ?? result);
 			setPartners((currentPartners) =>
@@ -173,7 +200,7 @@ export default function PartnerCompaniesPage() {
 		try {
 			await requestPartnerApi(`/${encodeURIComponent(partner.id)}`, {
 				method: "DELETE",
-			});
+			}, router);
 			setPartners((currentPartners) =>
 				currentPartners.filter((item) => item.id !== partner.id),
 			);

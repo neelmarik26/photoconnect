@@ -7,7 +7,27 @@ import styles from "./page.module.css";
 
 const savedUserKey = "photoConnectUser";
 
-async function adminRequest(path, token, options = {}) {
+function getAccessToken() {
+	try {
+		const saved = window.localStorage.getItem(savedUserKey);
+		if (!saved) return null;
+		const user = JSON.parse(saved);
+		return user.accessToken || null;
+	} catch {
+		return null;
+	}
+}
+
+function handleUnauthorized(router) {
+	router.replace("/admin/security");
+}
+
+async function adminRequest(path, router, options = {}) {
+	const token = getAccessToken();
+	if (!token) {
+		handleUnauthorized(router);
+		throw new Error("No access token");
+	}
 	const response = await fetch(
 		`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/admins${path}`,
 		{
@@ -18,6 +38,10 @@ async function adminRequest(path, token, options = {}) {
 			},
 		},
 	);
+	if (response.status === 401) {
+		handleUnauthorized(router);
+		throw new Error("Unauthorized");
+	}
 	const result = await response.json().catch(() => null);
 	if (!response.ok) {
 		throw new Error(result?.message || "Could not complete the admin request.");
@@ -42,20 +66,19 @@ export default function AdminsPage() {
 		try {
 			const user = JSON.parse(window.localStorage.getItem(savedUserKey) || "null");
 			if (
-				!user?.userId ||
-				user.type !== "SUPERADMIN" ||
-				user.accountCollection !== "admins" ||
-				user.expiresAt <= Date.now() ||
-				!user.accessToken
-			) {
-				router.replace("/admin/security");
-				return () => {
-					isCurrent = false;
-				};
-			}
+					!user?.userId ||
+					!["ADMIN", "SUPERADMIN"].includes(user.type) ||
+					user.expiresAt <= Date.now() ||
+					!user.accessToken
+				) {
+					router.replace("/admin/security");
+					return () => {
+						isCurrent = false;
+					};
+				}
 
 			startTransition(() => setAccessToken(user.accessToken));
-			adminRequest("", user.accessToken)
+			adminRequest("", router)
 				.then((result) => {
 					if (isCurrent) setAdmins(Array.isArray(result?.data) ? result.data : []);
 				})
@@ -99,7 +122,7 @@ export default function AdminsPage() {
 		};
 
 		try {
-			const result = await adminRequest("", accessToken, {
+			const result = await adminRequest("", router, {
 				method: "POST",
 				body: JSON.stringify(newAdmin),
 			});
@@ -120,7 +143,7 @@ export default function AdminsPage() {
 		setDeletingId(String(admin._id));
 		setMessage("");
 		try {
-			await adminRequest(`/${encodeURIComponent(admin._id)}`, accessToken, {
+			await adminRequest(`/${encodeURIComponent(admin._id)}`, router, {
 				method: "DELETE",
 			});
 			setAdmins((currentAdmins) =>
@@ -168,7 +191,7 @@ export default function AdminsPage() {
 						<header className={styles.directoryHeader}>
 							<div><h2>Admin accounts</h2><p>{filteredAdmins.length} accounts shown</p></div>
 							<label className={styles.search}>
-								<span aria-hidden="true">⌕</span>
+								<span aria-hidden="true">âŒ•</span>
 								<input
 									type="search"
 									value={searchTerm}
@@ -205,7 +228,7 @@ export default function AdminsPage() {
 			{isFormOpen && (
 				<div className={styles.modalBackdrop} onMouseDown={(event) => { if (event.target === event.currentTarget && !isSaving) setIsFormOpen(false); }}>
 					<section className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="create-admin-title">
-						<header><div><p>NEW ADMIN ACCOUNT</p><h2 id="create-admin-title">Create admin</h2></div><button type="button" aria-label="Close form" disabled={isSaving} onClick={() => setIsFormOpen(false)}>×</button></header>
+						<header><div><p>NEW ADMIN ACCOUNT</p><h2 id="create-admin-title">Create admin</h2></div><button type="button" aria-label="Close form" disabled={isSaving} onClick={() => setIsFormOpen(false)}>Ã—</button></header>
 						<form onSubmit={createAdmin}>
 							<label>Full name<input autoFocus required minLength={2} maxLength={100} name="name" placeholder="Admin name" /></label>
 							<label>Email address<input required type="email" maxLength={254} name="email" placeholder="admin@example.com" /></label>

@@ -1,8 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Swal from "sweetalert2";
 import styles from "./page.module.css";
+
+const savedUserKey = "photoConnectUser";
 
 const statusLabels = {
   pending: "Pending",
@@ -58,13 +61,15 @@ export default function BookingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("pending");
+  const [bookingStats, setBookingStats] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalBookings, setTotalBookings] = useState(0);
+  const [updatingBookingId, setUpdatingBookingId] = useState("");
   const limit = 10;
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async (isActive = () => true) => {
     setIsLoading(true);
     setError("");
     try {
@@ -83,61 +88,151 @@ export default function BookingsPage() {
         params.append("status", statusFilter);
       }
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/bookings?${params.toString()}`,
-        {
+      const savedUser = JSON.parse(window.localStorage.getItem(savedUserKey) || "null");
+      const token = savedUser?.accessToken;
+      const [response, statsResponse] = await Promise.all([
+        fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/bookings?${params.toString()}`,
+          {
+            headers: {
+              accept: "*/*",
+              ...(token ? { Authorization: 'Bearer ' + token } : {}),
+            },
+          },
+        ),
+        fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/bookings/stats`, {
           headers: {
             accept: "*/*",
+            ...(token ? { Authorization: 'Bearer ' + token } : {}),
           },
-        }
-      );
+        }),
+      ]);
 
-      const result = await response.json().catch(() => null);
+      const [result, statsResult] = await Promise.all([
+        response.json().catch(() => null),
+        statsResponse.json().catch(() => null),
+      ]);
 
       if (!response.ok) {
         throw new Error(result?.message || "Could not load bookings.");
       }
 
-      if (isCurrent) {
+      if (isActive()) {
         const data = result?.data || [];
           const total = result?.total || 0;
           const totalPagesCalc = Math.ceil(total / limit) || 1;
           setBookings(data);
           setTotalPages(totalPagesCalc);
           setTotalBookings(total);
+          if (statsResponse.ok) setBookingStats(statsResult || {});
         }
       } catch (err) {
-        if (isCurrent) {
+        if (isActive()) {
           setError(err.message || "Could not load bookings. Please try again.");
         }
       } finally {
-        if (isCurrent) setIsLoading(false);
+        if (isActive()) setIsLoading(false);
       }
-    };
-
-  let isCurrent = true;
+    }, [currentPage, searchTerm, statusFilter]);
 
   useEffect(() => {
-    isCurrent = true;
-    fetchBookings();
+    let isCurrent = true;
+    void Promise.resolve().then(() => fetchBookings(() => isCurrent));
     return () => {
       isCurrent = false;
     };
-  }, [currentPage, searchTerm, statusFilter]);
+  }, [fetchBookings]);
 
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
     setCurrentPage(1);
   };
 
-  const handleStatusChange = (e) => {
-    setStatusFilter(e.target.value);
+  const handleStatusTab = (status) => {
+    setStatusFilter(status);
     setCurrentPage(1);
   };
 
   const handlePageChange = (page) => {
     if (page >= 1 && page <= totalPages) {
       setCurrentPage(page);
+    }
+  };
+
+  const handleBookingStatus = async (booking, nextStatus) => {
+    const action = {
+      confirmed: "Confirm",
+      rejected: "Reject",
+      completed: "Complete",
+    }[nextStatus];
+    const confirmation = await Swal.fire({
+      icon: "question",
+      title: `${action} this booking?`,
+      text:
+        nextStatus === "confirmed"
+          ? "The photographer's selected event dates will be blocked."
+          : nextStatus === "completed"
+            ? "This booking will be marked as completed."
+            : "This booking request will be marked as rejected.",
+      showCancelButton: true,
+      confirmButtonText: action,
+      confirmButtonColor: nextStatus === "rejected" ? "#c7443e" : "#16877e",
+    });
+
+    if (!confirmation.isConfirmed) return;
+
+    setUpdatingBookingId(booking._id);
+    try {
+      const savedUser = JSON.parse(window.localStorage.getItem(savedUserKey) || "null");
+      const token = savedUser?.accessToken;
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/bookings/${encodeURIComponent(booking._id)}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            accept: "*/*",
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: 'Bearer ' + token } : {}),
+          },
+          body: JSON.stringify({ status: nextStatus }),
+        },
+      );
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(result?.message || `Could not ${nextStatus === "confirmed" ? "confirm" : "reject"} booking.`);
+      }
+
+      setBookings((current) =>
+        current.map((item) =>
+          item._id === booking._id ? { ...item, status: nextStatus } : item,
+        ),
+      );
+      await Swal.fire({
+        icon: "success",
+        title:
+          nextStatus === "confirmed"
+            ? "Booking confirmed"
+            : nextStatus === "completed"
+              ? "Booking completed"
+              : "Booking rejected",
+        text:
+          nextStatus === "confirmed"
+            ? "The photographer has been blocked for the selected dates."
+            : nextStatus === "completed"
+              ? "The booking has been marked as completed."
+              : "The booking request has been rejected.",
+        confirmButtonColor: "#16877e",
+      });
+      fetchBookings();
+    } catch (err) {
+      await Swal.fire({
+        icon: "error",
+        title: "Update failed",
+        text: err.message || "Could not update booking status.",
+        confirmButtonColor: "#16877e",
+      });
+    } finally {
+      setUpdatingBookingId("");
     }
   };
 
@@ -168,28 +263,28 @@ export default function BookingsPage() {
           <span className={styles.statIconTotal}>📋</span>
           <div>
             <small>Total Bookings</small>
-            <strong>{totalBookings}</strong>
+            <strong>{bookingStats.total ?? totalBookings}</strong>
           </div>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statIconPending}>◷</span>
           <div>
             <small>Pending</small>
-            <strong>{statusCounts.pending || 0}</strong>
+            <strong>{bookingStats.pending ?? statusCounts.pending ?? 0}</strong>
           </div>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statIconConfirmed}>✓</span>
           <div>
             <small>Confirmed</small>
-            <strong>{statusCounts.confirmed || 0}</strong>
+            <strong>{bookingStats.confirmed ?? statusCounts.confirmed ?? 0}</strong>
           </div>
         </div>
         <div className={styles.statCard}>
           <span className={styles.statIconCompleted}>✓</span>
           <div>
             <small>Completed</small>
-            <strong>{statusCounts.completed || 0}</strong>
+            <strong>{bookingStats.completed ?? statusCounts.completed ?? 0}</strong>
           </div>
         </div>
       </div>
@@ -200,30 +295,30 @@ export default function BookingsPage() {
             <h2>All Bookings</h2>
             <p>Manage and track booking statuses.</p>
           </div>
-          <div className={styles.filterGroup}>
-            <label className={styles.search}>
-              <span>⌕</span>
-              <input
-                placeholder="Search bookings..."
-                aria-label="Search bookings"
-                value={searchTerm}
-                onChange={handleSearch}
-              />
-            </label>
-            <select
-              value={statusFilter}
-              onChange={handleStatusChange}
-              className={styles.statusSelect}
-              aria-label="Filter by status"
+          <label className={styles.search}>
+            <span>⌕</span>
+            <input
+              placeholder="Search bookings..."
+              aria-label="Search bookings"
+              value={searchTerm}
+              onChange={handleSearch}
+            />
+          </label>
+        </div>
+        <div className={styles.tabs} role="tablist" aria-label="Booking status">
+          {["all", "pending", "confirmed", "completed", "cancelled", "rejected"].map((status) => (
+            <button
+              key={status}
+              type="button"
+              role="tab"
+              aria-selected={statusFilter === status}
+              className={statusFilter === status ? styles.tabActive : styles.tab}
+              onClick={() => handleStatusTab(status)}
             >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
+              {status === "all" ? "All" : statusLabels[status]}
+              <span>{status === "all" ? bookingStats.total ?? totalBookings : bookingStats[status] ?? 0}</span>
+            </button>
+          ))}
         </div>
 
         <div className={styles.tableWrap}>
@@ -239,26 +334,27 @@ export default function BookingsPage() {
                             <th>Status</th>
                 <th>Amount</th>
                 <th>Created</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {isLoading && (
                 <tr>
-                  <td className={styles.empty} colSpan="9">
+                  <td className={styles.empty} colSpan="10">
                     Loading bookings...
                   </td>
                 </tr>
               )}
               {!isLoading && error && (
                 <tr>
-                  <td className={styles.empty} colSpan="9" role="alert">
+                  <td className={styles.empty} colSpan="10" role="alert">
                     {error}
                   </td>
                 </tr>
               )}
               {!isLoading && !error && bookings.length === 0 && (
                 <tr>
-                  <td className={styles.empty} colSpan="9">
+                  <td className={styles.empty} colSpan="10">
                     No bookings found.
                   </td>
                 </tr>
@@ -322,6 +418,41 @@ export default function BookingsPage() {
                               </td>
                               <td>₹{booking.totalPrice || 0}</td>
                               <td>{formatDateTime(booking.createdAt)}</td>
+                              <td>
+                                {booking.status?.toLowerCase() === "pending" ? (
+                                  <div className={styles.actions}>
+                                    <button
+                                      type="button"
+                                      className={`${styles.actionButton} ${styles.confirmButton}`}
+                                      onClick={() => handleBookingStatus(booking, "confirmed")}
+                                      disabled={updatingBookingId === booking._id}
+                                    >
+                                      {updatingBookingId === booking._id ? "Updating..." : "Confirm"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={`${styles.actionButton} ${styles.rejectButton}`}
+                                      onClick={() => handleBookingStatus(booking, "rejected")}
+                                      disabled={updatingBookingId === booking._id}
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                ) : booking.status?.toLowerCase() === "confirmed" ? (
+                                  <div className={styles.actions}>
+                                    <button
+                                      type="button"
+                                      className={`${styles.actionButton} ${styles.completeButton}`}
+                                      onClick={() => handleBookingStatus(booking, "completed")}
+                                      disabled={updatingBookingId === booking._id}
+                                    >
+                                      {updatingBookingId === booking._id ? "Updating..." : "Complete"}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className={styles.noActions}>—</span>
+                                )}
+                              </td>
                             </tr>
                           ))}
                         </tbody>

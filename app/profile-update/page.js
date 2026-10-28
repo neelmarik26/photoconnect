@@ -82,14 +82,22 @@ export default function ProfileDetailsPage() {
           () => resolve({ latitude: null, longitude: null }),
         );
       });
-      formData.set(
-        "latitude",
-        coordinates.latitude === null ? "null" : String(coordinates.latitude),
-      );
-      formData.set(
-        "longitude",
-        coordinates.longitude === null ? "null" : String(coordinates.longitude),
-      );
+      const latitude = coordinates.latitude === null || coordinates.latitude === undefined
+        ? NaN
+        : Number(coordinates.latitude);
+      const longitude = coordinates.longitude === null || coordinates.longitude === undefined
+        ? NaN
+        : Number(coordinates.longitude);
+      if (Number.isFinite(latitude) && latitude >= -90 && latitude <= 90) {
+        formData.set("latitude", String(latitude));
+      } else {
+        formData.delete("latitude");
+      }
+      if (Number.isFinite(longitude) && longitude >= -180 && longitude <= 180) {
+        formData.set("longitude", String(longitude));
+      } else {
+        formData.delete("longitude");
+      }
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/profileSetup`,
         {

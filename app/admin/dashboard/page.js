@@ -7,7 +7,17 @@ import styles from "./page.module.css";
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
 async function fetchJson(path) {
-  const response = await fetch(`${BACKEND_URL}/api/${path}`);
+  let token = "";
+  try {
+    const savedUser = JSON.parse(window.localStorage.getItem("photoConnectUser") || "null");
+    token = savedUser?.accessToken || "";
+  } catch {
+    window.localStorage.removeItem("photoConnectUser");
+  }
+
+  const response = await fetch(`${BACKEND_URL}/api/${path}`, {
+    headers: token ? { Authorization: 'Bearer ' + token } : {},
+  });
   const result = await response.json().catch(() => null);
   if (!response.ok) {
     throw new Error(result?.message || `Could not load ${path}.`);

@@ -7,6 +7,12 @@ import styles from "./page.module.css";
 
 const savedUserKey = "photoConnectUser";
 
+function getImageUrl(imageUrl) {
+	if (!imageUrl) return "";
+	if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
+	return `${process.env.NEXT_PUBLIC_BACKEND_URL || ""}${imageUrl}`;
+}
+
 function getAccessToken() {
   try {
     const saved = window.localStorage.getItem(savedUserKey);
@@ -35,7 +41,9 @@ async function requestPartnerApi(path = "", options = {}, router) {
 			headers: {
 				Authorization: `Bearer ${token}`,
 				...options.headers,
-				...(options.body ? { "Content-Type": "application/json" } : {}),
+				...(options.body && !(options.body instanceof FormData)
+					? { "Content-Type": "application/json" }
+					: {}),
 			},
 		},
 	);
@@ -67,6 +75,17 @@ export default function PartnerCompaniesPage() {
 	const [editingPartner, setEditingPartner] = useState(null);
 	const [message, setMessage] = useState("");
 	const [messageIsError, setMessageIsError] = useState(false);
+	const [selectedImage, setSelectedImage] = useState(null);
+	const [selectedImagePreview, setSelectedImagePreview] = useState("");
+	const [deletingImagePartnerId, setDeletingImagePartnerId] = useState("");
+	const [formData, setFormData] = useState({
+		name: "",
+		description: "",
+		facebookUrl: "",
+		instagramUrl: "",
+		linkedinUrl: "",
+		status: "Draft",
+	});
 
 	useEffect(() => {
 		let isCurrent = true;
@@ -145,21 +164,30 @@ export default function PartnerCompaniesPage() {
 	function closeForm() {
 		setIsFormOpen(false);
 		setEditingPartner(null);
+		setSelectedImage(null);
+		setSelectedImagePreview("");
+		setFormData({
+			name: "",
+			description: "",
+			facebookUrl: "",
+			instagramUrl: "",
+			linkedinUrl: "",
+			status: "Draft",
+		});
 	}
 
 	async function savePartner(event) {
 		event.preventDefault();
 		setIsSaving(true);
 		setMessage("");
-		const formData = new FormData(event.currentTarget);
+
 		const nextPartner = {
-			icon: String(formData.get("icon") || "").trim() || "★",
-			name: String(formData.get("name") || "").trim(),
-			description: String(formData.get("description") || "").trim(),
-			facebookUrl: String(formData.get("facebookUrl") || "").trim() || null,
-			instagramUrl: String(formData.get("instagramUrl") || "").trim() || null,
-			linkedinUrl: String(formData.get("linkedinUrl") || "").trim() || null,
-			status: String(formData.get("status") || "Draft"),
+			name: formData.name.trim(),
+			description: formData.description.trim(),
+			facebookUrl: formData.facebookUrl.trim() || null,
+			instagramUrl: formData.instagramUrl.trim() || null,
+			linkedinUrl: formData.linkedinUrl.trim() || null,
+			status: formData.status,
 		};
 
 		try {
@@ -172,6 +200,16 @@ export default function PartnerCompaniesPage() {
 				router,
 			);
 			const savedPartner = mapPartnerCompany(result?.data ?? result);
+			if (selectedImage) {
+				const imageData = new FormData();
+				imageData.append("image", selectedImage);
+				const imageResult = await requestPartnerApi(
+					`/${encodeURIComponent(savedPartner.id)}/image`,
+					{ method: "PATCH", body: imageData },
+					router,
+				);
+				Object.assign(savedPartner, imageResult?.data ?? imageResult);
+			}
 			setPartners((currentPartners) =>
 				editingPartner
 					? currentPartners.map((partner) =>
@@ -214,6 +252,32 @@ export default function PartnerCompaniesPage() {
 		}
 	}
 
+	async function deletePartnerImage(partner) {
+		if (!window.confirm(`Delete the image for ${partner.name}?`)) {
+			return;
+		}
+
+		setDeletingImagePartnerId(partner.id);
+		setMessage("");
+		try {
+			await requestPartnerApi(`/${encodeURIComponent(partner.id)}/image`, {
+				method: "DELETE",
+			}, router);
+			setPartners((currentPartners) =>
+				currentPartners.map((item) =>
+					item.id === partner.id ? { ...item, imageUrl: "" } : item,
+				),
+			);
+			setMessage(`Image for ${partner.name} deleted.`);
+			setMessageIsError(false);
+		} catch (error) {
+			setMessage(error.message || "Could not delete the image.");
+			setMessageIsError(true);
+		} finally {
+			setDeletingImagePartnerId("");
+		}
+	}
+
 	if (!hasAdminAccess) return null;
 
 	return (
@@ -230,6 +294,14 @@ export default function PartnerCompaniesPage() {
 							type="button"
 							onClick={() => {
 								setEditingPartner(null);
+								setFormData({
+									name: "",
+									description: "",
+									facebookUrl: "",
+									instagramUrl: "",
+									linkedinUrl: "",
+									status: "Draft",
+								});
 								setMessage("");
 								setIsFormOpen(true);
 							}}
@@ -315,7 +387,26 @@ export default function PartnerCompaniesPage() {
 										<tr key={partner.id}>
 											<td>
 												<div className={styles.companyCell}>
-													<span className={styles.companyMark}>{partner.icon}</span>
+													{partner.imageUrl ? (
+														<div className={styles.companyImageWrapper}>
+															<img
+																className={styles.companyImage}
+																src={getImageUrl(partner.imageUrl)}
+																alt={`${partner.name} logo`}
+															/>
+															<button
+																type="button"
+																className={styles.deleteImageButton}
+																onClick={() => deletePartnerImage(partner)}
+																disabled={deletingImagePartnerId === partner.id}
+																aria-label={`Delete image for ${partner.name}`}
+															>
+																{deletingImagePartnerId === partner.id ? "Deleting..." : "×"}
+															</button>
+														</div>
+													) : (
+														<span className={styles.companyMark} aria-hidden="true" />
+													)}
 													<strong>{partner.name}</strong>
 												</div>
 											</td>
@@ -374,6 +465,16 @@ export default function PartnerCompaniesPage() {
 														className={styles.editAction}
 														onClick={() => {
 															setEditingPartner(partner);
+															setFormData({
+																name: partner.name || "",
+																description: partner.description || "",
+																facebookUrl: partner.facebookUrl || "",
+																instagramUrl: partner.instagramUrl || "",
+																linkedinUrl: partner.linkedinUrl || "",
+																status: partner.status || "Draft",
+															});
+															setSelectedImage(null);
+															setSelectedImagePreview("");
 															setMessage("");
 															setIsFormOpen(true);
 														}}
@@ -445,25 +546,41 @@ export default function PartnerCompaniesPage() {
 									required
 									maxLength={80}
 									name="name"
-									defaultValue={editingPartner?.name || ""}
+									value={formData.name}
+									onChange={(e) => setFormData({ ...formData, name: e.target.value })}
 									placeholder="e.g. Northstar Weddings"
 								/>
 							</label>
 							<div className={styles.formRow}>
 								<label>
-									Mark
+									Company image
+									{editingPartner?.imageUrl && (
+										<div className={styles.currentImagePreview}>
+											<img
+												src={getImageUrl(editingPartner.imageUrl)}
+												alt={`${editingPartner.name} current logo`}
+											/>
+											<span>Current image</span>
+										</div>
+									)}
 									<input
-										maxLength={3}
-										name="icon"
-										defaultValue={editingPartner?.icon || ""}
-										placeholder="★"
+										type="file"
+										accept="image/jpeg,image/png,image/gif,image/webp"
+										onChange={(event) => {
+											const file = event.currentTarget.files?.[0] || null;
+											if (selectedImagePreview) URL.revokeObjectURL(selectedImagePreview);
+											setSelectedImage(file);
+											setSelectedImagePreview(file ? URL.createObjectURL(file) : "");
+										}}
 									/>
+									<small>JPG, PNG, GIF or WebP. Maximum 5 MB.</small>
 								</label>
 								<label>
 									Publication status
 									<select
 										name="status"
-										defaultValue={editingPartner?.status || "Draft"}
+										value={formData.status}
+										onChange={(e) => setFormData({ ...formData, status: e.target.value })}
 									>
 										<option>Draft</option>
 										<option>Published</option>
@@ -476,7 +593,8 @@ export default function PartnerCompaniesPage() {
 									required
 									maxLength={120}
 									name="description"
-									defaultValue={editingPartner?.description || ""}
+									value={formData.description}
+									onChange={(e) => setFormData({ ...formData, description: e.target.value })}
 									placeholder="A short line about the company"
 								/>
 							</label>
@@ -488,7 +606,8 @@ export default function PartnerCompaniesPage() {
 										type="url"
 										maxLength={2048}
 										name="facebookUrl"
-										defaultValue={editingPartner?.facebookUrl || ""}
+										value={formData.facebookUrl}
+										onChange={(e) => setFormData({ ...formData, facebookUrl: e.target.value })}
 										placeholder="https://facebook.com/company"
 									/>
 								</label>
@@ -498,7 +617,8 @@ export default function PartnerCompaniesPage() {
 										type="url"
 										maxLength={2048}
 										name="instagramUrl"
-										defaultValue={editingPartner?.instagramUrl || ""}
+										value={formData.instagramUrl}
+										onChange={(e) => setFormData({ ...formData, instagramUrl: e.target.value })}
 										placeholder="https://instagram.com/company"
 									/>
 								</label>
@@ -508,7 +628,8 @@ export default function PartnerCompaniesPage() {
 										type="url"
 										maxLength={2048}
 										name="linkedinUrl"
-										defaultValue={editingPartner?.linkedinUrl || ""}
+										value={formData.linkedinUrl}
+										onChange={(e) => setFormData({ ...formData, linkedinUrl: e.target.value })}
 										placeholder="https://linkedin.com/company/name"
 									/>
 								</label>

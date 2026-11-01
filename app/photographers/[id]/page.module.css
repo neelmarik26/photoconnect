@@ -524,6 +524,7 @@
 .modal {
   width: 100%;
   max-width: 760px;
+  max-height: calc(100vh - 48px);
   display: flex;
   flex-direction: column;
   flex: 0 0 auto;
@@ -659,14 +660,18 @@
   min-height: 0;
   flex: 1;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .modalFormContent {
   display: grid;
+  min-height: 0;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
   gap: 18px 22px;
   padding: 16px 24px 20px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .modalError {
@@ -1109,6 +1114,7 @@
 
 .modalActions {
   display: flex;
+  flex: 0 0 auto;
   justify-content: flex-end;
   gap: 10px;
   padding: 12px 24px max(12px, env(safe-area-inset-bottom));
@@ -1204,6 +1210,7 @@
   }
 
   .modal {
+    max-height: calc(100dvh - 20px);
     border-radius: 16px;
   }
 

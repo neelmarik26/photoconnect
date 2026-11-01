@@ -72,7 +72,6 @@ export default function PhotographerDetailsPage() {
     eventDate: [],
     eventLocation: "",
     durationHours: "",
-    totalPrice: "",
     notes: "",
     specialRequirements: "",
   });
@@ -292,9 +291,9 @@ export default function PhotographerDetailsPage() {
       key: photo._id || `${photo.link}-${index}`,
     })),
     ...profileVideoUrls.map((videoUrl, index) => ({
-      type: "video",
+      type: /\.(mp4|webm|mov|avi|ogv|mkv)$/i.test(videoUrl) ? "video" : "photo",
       src: getImageUrl(videoUrl),
-      label: `Profile video ${index + 1}`,
+      label: `Profile media ${index + 1}`,
       key: `${videoUrl}-${index}`,
     })),
   ];
@@ -319,7 +318,9 @@ export default function PhotographerDetailsPage() {
     if (!showBookingModal) return undefined;
 
     const previousOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
 
     function closeOnEscape(event) {
       if (event.key === "Escape" && !bookingLoading) {
@@ -330,6 +331,7 @@ export default function PhotographerDetailsPage() {
     window.addEventListener("keydown", closeOnEscape);
     return () => {
       document.body.style.overflow = previousOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
       window.removeEventListener("keydown", closeOnEscape);
     };
   }, [showBookingModal, bookingLoading]);
@@ -375,7 +377,6 @@ export default function PhotographerDetailsPage() {
             eventDate: bookingForm.eventDate.filter(Boolean),
             eventLocation: bookingForm.eventLocation,
             durationHours: bookingForm.durationHours,
-            totalPrice: bookingForm.totalPrice,
             notes: bookingForm.notes,
             specialRequirements: bookingForm.specialRequirements,
           }),
@@ -392,7 +393,6 @@ export default function PhotographerDetailsPage() {
           eventDate: [],
           eventLocation: "",
           durationHours: 4,
-          totalPrice: 600,
           notes: "",
           specialRequirements: "",
         });
@@ -469,7 +469,7 @@ export default function PhotographerDetailsPage() {
                     <h2 id="profile-title">{photographer.name}</h2>
                     <p>{photographer.proffession || "Photographer"}</p>
                   </div>
-                  <span className={styles.approved}>✓ Approved</span>
+                  <span className={styles.approved}>✓ verified</span>
                 </div>
                 <p className={styles.location}>● {location}</p>
                 <div className={styles.stats}>
@@ -1060,17 +1060,6 @@ export default function PhotographerDetailsPage() {
                                     />
                                   </div>
 
-                                  <div className={styles.modalField}>
-                                    <label htmlFor="totalPrice">Your budget (₹) *</label>
-                                    <input
-                                      type="number"
-                                      id="totalPrice"
-                                      value={bookingForm.totalPrice}
-                                      onChange={(e) => setBookingForm((prev) => ({ ...prev, totalPrice: parseInt(e.target.value) || 0 }))}
-                                      min="0"
-                                      required
-                                    />
-                                  </div>
                                       </div>
                                     </section>
 

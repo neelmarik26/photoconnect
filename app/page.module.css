@@ -550,6 +550,16 @@
   padding: 18px 10px 15px;
   min-height: 145px;
 }
+.partnerImageWrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.partnerImage {
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e1e8ed;
+}
 .partnerGrid strong {
   display: block;
   color: #d42792;

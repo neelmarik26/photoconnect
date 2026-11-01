@@ -38,6 +38,28 @@
   cursor: pointer;
 }
 
+.headerActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.secondaryButton {
+  padding: 10px 14px;
+  border: 1px solid #d6e0e8;
+  border-radius: 5px;
+  background: #fff;
+  color: #506678;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.secondaryButton:hover {
+  border-color: #1682f7;
+  color: #1682f7;
+}
+
 .exportButton:hover {
   border-color: #1682f7;
   color: #1682f7;
@@ -164,6 +186,15 @@
   font-size: 10px;
 }
 
+.search button {
+  border: 0;
+  background: transparent;
+  color: #8193a1;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .statusSelect {
   padding: 8px 12px;
   border: 1px solid #dce5eb;
@@ -215,11 +246,12 @@
 
 .tableWrap {
   width: 100%;
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .tableWrap table {
   width: 100%;
+  min-width: 1080px;
   table-layout: fixed;
   border-collapse: collapse;
 }
@@ -252,6 +284,26 @@
 .tableWrap th:nth-child(8) { width: 8%; }
 .tableWrap th:nth-child(9) { width: 13%; }
 .tableWrap th:nth-child(10) { width: 8%; }
+
+.tableWrap th:nth-child(11) { width: 8%; }
+
+.tableWrap th,
+.tableWrap td {
+  border-right: 1px solid #edf1f4;
+}
+
+.tableWrap th:last-child,
+.tableWrap td:last-child {
+  border-right: 0;
+}
+
+.tableWrap tbody tr {
+  transition: background-color 120ms ease;
+}
+
+.tableWrap tbody tr:hover {
+  background: #fafdff;
+}
 
 .tableWrap tr:last-child td {
   border-bottom: 0;
@@ -478,4 +530,42 @@
 .footerNote span {
   margin-left: 12px;
   color: #1e82ec;
+}
+
+@media (max-width: 900px) {
+  .pageIntro {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .statGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .panelHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .search {
+    width: 100%;
+  }
+}
+
+@media (max-width: 520px) {
+  .statGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .headerActions {
+    width: 100%;
+  }
+
+  .headerActions button {
+    flex: 1;
+  }
+
+  .tabs {
+    gap: 18px;
+  }
 }

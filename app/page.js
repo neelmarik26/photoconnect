@@ -25,6 +25,7 @@ function getUploadUrl(path) {
   if (path.startsWith("/public/")) {
     return `${BACKEND_URL}${path}`;
   }
+
   return `${BASE_PATH}${path}`;
 }
 
@@ -380,7 +381,17 @@ export default function Home() {
                 >
                   {partners.map((partner) => (
                     <article key={`${partner.id}-${isDuplicate ? "duplicate" : "original"}`}>
-                      <strong>{partner.icon}</strong>
+                      {partner.imageUrl && (
+                        <div className={styles.partnerImageWrapper}>
+                          <Image
+                            src={getUploadUrl(partner.imageUrl)}
+                            alt={partner.name}
+                            width={80}
+                            height={80}
+                            className={styles.partnerImage}
+                          />
+                        </div>
+                      )}
                       <h3>{partner.name}</h3>
                       <small>{partner.description}</small>
                       <div aria-label={`${partner.name} social profiles`}>

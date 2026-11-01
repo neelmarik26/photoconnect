@@ -278,9 +278,11 @@ export default function BookingsPage() {
           <h1>Booking Management</h1>
           <p>View and manage all photographer bookings.</p>
         </div>
-        <button className={styles.exportButton} onClick={() => window.print()}>
-          ⇩ <span>Export report</span>
-        </button>
+        <div className={styles.headerActions}>
+          <button className={styles.secondaryButton} type="button" onClick={() => fetchBookings()}>
+            ↻ <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
       <div className={styles.statGrid}>
@@ -328,6 +330,18 @@ export default function BookingsPage() {
               value={searchTerm}
               onChange={handleSearch}
             />
+            {searchTerm && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => {
+                  setSearchTerm("");
+                  setCurrentPage(1);
+                }}
+              >
+                ×
+              </button>
+            )}
           </label>
         </div>
         <div className={styles.tabs} role="tablist" aria-label="Booking status">
@@ -353,6 +367,7 @@ export default function BookingsPage() {
                 <th>Booking ID</th>
                 <th>Photographer</th>
                 <th>Client</th>
+                <th>Client Phone</th>
                             <th>Event Date(s)</th>
                             <th>Location</th>
                             <th>Duration</th>
@@ -365,21 +380,21 @@ export default function BookingsPage() {
             <tbody>
               {isLoading && (
                 <tr>
-                  <td className={styles.empty} colSpan="10">
+                  <td className={styles.empty} colSpan="11">
                     Loading bookings...
                   </td>
                 </tr>
               )}
               {!isLoading && error && (
                 <tr>
-                  <td className={styles.empty} colSpan="10" role="alert">
+                  <td className={styles.empty} colSpan="11" role="alert">
                     {error}
                   </td>
                 </tr>
               )}
               {!isLoading && !error && bookings.length === 0 && (
                 <tr>
-                  <td className={styles.empty} colSpan="10">
+                  <td className={styles.empty} colSpan="11">
                     No bookings found.
                   </td>
                 </tr>
@@ -423,6 +438,7 @@ export default function BookingsPage() {
                                   <small>{booking.userId?.email || ""}</small>
                                 </div>
                               </td>
+                              <td>{booking.userId?.phone || "N/A"}</td>
                               <td>
                                 {Array.isArray(booking.eventDate) ? (
                                   booking.eventDate.map((date, idx) => (

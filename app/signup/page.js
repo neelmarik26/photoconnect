@@ -90,13 +90,20 @@ export default function SignUpPage() {
         nextFieldErrors[fieldName] = `Your ${label} is missing.`;
       }
     }
+    if (userType === "PARTNER" && !String(formData.get("phone") ?? "").trim()) {
+      nextFieldErrors.phone = "Your phone number is missing.";
+    }
 
     const email = String(formData.get("email") ?? "").trim();
+    const phone = String(formData.get("phone") ?? "").replace(/\D/g, "");
     const password = formData.get("password");
     const confirmPassword = formData.get("confirmPassword");
 
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       nextFieldErrors.email = "Enter a valid email address.";
+    }
+    if (userType === "PARTNER" && phone && !/^\d{10}$/.test(phone)) {
+      nextFieldErrors.phone = "Enter a 10-digit phone number.";
     }
     if (String(password ?? "").trim() && password.length < 8) {
       nextFieldErrors.password = "Password must be at least 8 characters.";
@@ -117,6 +124,7 @@ export default function SignUpPage() {
         email: formData.get("email"),
         password,
         type: userType,
+        ...(userType === "PARTNER" ? { phone } : {}),
         };
         // console.log(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/signup`);
         const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/signup`, {
@@ -156,6 +164,28 @@ export default function SignUpPage() {
           </div>
           <form className={styles.form} onSubmit={submitForm} noValidate>
             <label className={styles.field}>
+              Account Type
+              <select
+                name="userType"
+                className={styles.typeSelect}
+                value={userType}
+                onChange={handleUserTypeChange}
+                required
+                aria-invalid={!userType && Boolean(fieldErrors.userType)}
+                aria-describedby={!userType && fieldErrors.userType ? "userType-error" : undefined}
+              >
+                <option value="" disabled>
+                  Select account type
+                </option>
+                {userTypeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {!userType && fieldErrors.userType && <span className={styles.fieldError} id="userType-error">{fieldErrors.userType}</span>}
+            </label>
+            <label className={styles.field}>
               Full Name
               <input
                 required
@@ -180,6 +210,27 @@ export default function SignUpPage() {
               />
               {fieldErrors.email && <span className={styles.fieldError} id="email-error">{fieldErrors.email}</span>}
             </label>
+            {userType === "PARTNER" && (
+              <label className={styles.field}>
+                Phone Number
+                <input
+                  required
+                  name="phone"
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  pattern="[0-9]{10}"
+                  placeholder="Enter your 10-digit phone number"
+                  aria-invalid={Boolean(fieldErrors.phone)}
+                  aria-describedby={fieldErrors.phone ? "phone-error" : undefined}
+                  onChange={(event) => {
+                    event.target.value = event.target.value.replace(/\D/g, "").slice(0, 10);
+                    setFieldErrors((errors) => ({ ...errors, phone: "" }));
+                  }}
+                />
+                {fieldErrors.phone && <span className={styles.fieldError} id="phone-error">{fieldErrors.phone}</span>}
+              </label>
+            )}
             <label className={styles.field}>
               Password
               <span className={styles.passwordInput}>
@@ -250,28 +301,6 @@ export default function SignUpPage() {
               </span>
               {fieldErrors.confirmPassword && <span className={styles.fieldError} id="confirmPassword-error">{fieldErrors.confirmPassword}</span>}
             </label>
-                        <label className={styles.field}>
-                          Account Type
-                          <select
-                            name="userType"
-                            className={styles.typeSelect}
-                            value={userType}
-                            onChange={handleUserTypeChange}
-                            required
-                            aria-invalid={!userType && Boolean(fieldErrors.userType)}
-                            aria-describedby={!userType && fieldErrors.userType ? "userType-error" : undefined}
-                          >
-                            <option value="" disabled>
-                              Select account type
-                            </option>
-                            {userTypeOptions.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
-                          {!userType && fieldErrors.userType && <span className={styles.fieldError} id="userType-error">{fieldErrors.userType}</span>}
-                        </label>
                         {errorMessage && (
               <p className={styles.formError} role="alert">
                 <svg viewBox="0 0 20 20" aria-hidden="true">

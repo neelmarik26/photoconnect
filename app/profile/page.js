@@ -14,8 +14,8 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
 const savedUserKey = "photoConnectUser";
 const maxSamplePhotos = 5;
 const maxSamplePhotoSize = 5 * 1024 * 1024;
-const maxProfileVideoSize = 15 * 1024 * 1024;
-const maxProfileVideos = 2;
+const maxProfileVideoSize = 20 * 1024 * 1024;
+const maxProfileVideos = 5;
 const allowedProfileVideoTypes = [
   "video/mp4",
   "video/webm",
@@ -23,6 +23,13 @@ const allowedProfileVideoTypes = [
   "video/x-msvideo",
   "video/ogg",
   "video/x-matroska",
+];
+const allowedProfileMediaTypes = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  ...allowedProfileVideoTypes,
 ];
 
 const editableSections = [
@@ -578,13 +585,13 @@ export default function ProfilePage() {
       return;
     }
     for (const videoFile of videoFiles) {
-      if (videoFile && !allowedProfileVideoTypes.includes(videoFile.type)) {
-        setSaveMessage("Choose an MP4, WebM, MOV, AVI, OGG, or MKV video.");
+      if (videoFile && !allowedProfileMediaTypes.includes(videoFile.type)) {
+        setSaveMessage("Choose a JPG, PNG, GIF, WebP, MP4, WebM, MOV, AVI, OGG, or MKV file.");
         setSaveMessageIsError(true);
         return;
       }
       if (videoFile?.size > maxProfileVideoSize) {
-        setSaveMessage("Each video must be 15 MB or smaller.");
+        setSaveMessage("Each photo or video must be 20 MB or smaller.");
         setSaveMessageIsError(true);
         return;
       }
@@ -1462,11 +1469,10 @@ export default function ProfilePage() {
 
               {isPhotographer && (
                 <section className={styles.editSection}>
-                  <h2>Profile video</h2>
+                  <h2>Profile photos and videos</h2>
                   <p className={styles.sampleIntro}>
-                    Share a video with clients. MP4, WebM, MOV, AVI, OGG, or MKV
-                    files up to 15 MB are supported. You can add up to two
-                    videos.
+                    Share up to five photos or videos with clients. JPG, PNG, GIF,
+                    WebP and supported video formats up to 20 MB each are accepted.
                   </p>
                   <div className={styles.videoSlots}>
                     {getProfileVideos(profile, profileVideos).map(
@@ -1474,33 +1480,56 @@ export default function ProfilePage() {
                         const isMarkedForRemoval =
                           deletedVideoSlots.includes(index);
                         const previewUrl = selectedVideoPreviews[index];
+                        const isImageMedia =
+                          selectedVideoFiles[index]?.type.startsWith("image/") ||
+                          /\.(jpe?g|png|gif|webp)$/i.test(videoUrl || "");
                         return (
                           <article className={styles.videoUpload} key={index}>
                             <div className={styles.videoPreviewFrame}>
                               {previewUrl ||
                               (videoUrl && !isMarkedForRemoval) ? (
-                                <video
-                                  className={styles.videoPreview}
-                                  src={
-                                    previewUrl || getGalleryImageUrl(videoUrl)
-                                  }
-                                  controls
-                                  playsInline
-                                  preload="metadata"
-                                />
+                                isImageMedia ? (
+                                  previewUrl ? (
+                                    <img
+                                      className={styles.videoPreview}
+                                      src={previewUrl}
+                                      alt={`Selected profile media ${index + 1}`}
+                                    />
+                                  ) : (
+                                    <Image
+                                    className={styles.videoPreview}
+                                    src={getGalleryImageUrl(videoUrl)}
+                                    alt=""
+                                    fill
+                                    unoptimized
+                                    />
+                                  )
+                                ) : (
+                                  <video
+                                    className={styles.videoPreview}
+                                    src={
+                                      previewUrl || getGalleryImageUrl(videoUrl)
+                                    }
+                                    controls
+                                    playsInline
+                                    preload="metadata"
+                                  />
+                                )
                               ) : (
-                                <p>No video in slot {index + 1}.</p>
+                                <p>No photo or video in slot {index + 1}.</p>
                               )}
                             </div>
                             <div className={styles.imageUploadContent}>
                               <strong>
                                 {selectedVideoFiles[index]
-                                  ? "New video selected"
+                                  ? selectedVideoFiles[index].type.startsWith("image/")
+                                    ? "New photo selected"
+                                    : "New video selected"
                                   : videoUrl
-                                    ? `Current video ${index + 1}`
-                                    : `Add video ${index + 1}`}
+                                    ? `Current media ${index + 1}`
+                                    : `Add photo or video ${index + 1}`}
                               </strong>
-                              <p>Maximum size: 15 MB.</p>
+                              <p>Maximum size: 20 MB per photo or video.</p>
                               <label className={styles.imageSelectButton}>
                                 <input
                                   ref={(element) => {
@@ -1508,8 +1537,8 @@ export default function ProfilePage() {
                                   }}
                                   className={styles.imageFileInput}
                                   type="file"
-                                  accept={allowedProfileVideoTypes.join(",")}
-                                  aria-label={`Choose profile video ${index + 1}`}
+                                  accept={allowedProfileMediaTypes.join(",")}
+                                  aria-label={`Choose profile photo or video ${index + 1}`}
                                   onChange={(event) => {
                                     updateSelectedVideo(
                                       index,
@@ -1522,8 +1551,8 @@ export default function ProfilePage() {
                                   {selectedVideoFiles[index]
                                     ? "Choose another"
                                     : videoUrl
-                                      ? "Replace video"
-                                      : "Choose video"}
+                                      ? "Replace photo or video"
+                                        : "Choose photo or video"}
                                 </span>
                               </label>
                               {selectedVideoFiles[index] && (
@@ -1559,7 +1588,9 @@ export default function ProfilePage() {
                                     ? "Undo clear"
                                     : selectedVideoFiles[index]
                                       ? "Clear selection"
-                                      : "Clear video"}
+                                      : isImageMedia
+                                        ? "Clear photo"
+                                        : "Clear video"}
                                 </button>
                               )}
                               {isMarkedForRemoval && (
@@ -1573,114 +1604,6 @@ export default function ProfilePage() {
                       },
                     )}
                   </div>
-                </section>
-              )}
-
-              {isPhotographer && (
-                <section className={styles.editSection}>
-                  <h2>Portfolio sample photos</h2>
-                  <p className={styles.sampleIntro}>
-                    Upload up to five photos to show clients examples of your
-                    work. Each photo can be up to 5 MB and is saved to your
-                    profile gallery.
-                  </p>
-                  <div className={styles.samplePhotoGrid}>
-                    {sampleFiles.map((file, index) => {
-                      const savedPhoto = galleryPhotos[index];
-                      const isMarkedForRemoval =
-                        savedPhoto &&
-                        deletedSamplePhotoIds.includes(savedPhoto._id);
-                      const previewUrl = samplePreviewUrls[index];
-                      const imageUrl =
-                        previewUrl ||
-                        (savedPhoto && !isMarkedForRemoval
-                          ? getGalleryImageUrl(savedPhoto.link)
-                          : "");
-                      return (
-                        <article className={styles.samplePhotoSlot} key={index}>
-                          <div className={styles.samplePhotoPreview}>
-                            {imageUrl ? (
-                              <Image
-                                src={imageUrl}
-                                alt={`Portfolio sample ${index + 1}`}
-                                width={320}
-                                height={220}
-                                unoptimized
-                              />
-                            ) : (
-                              <span>Sample {index + 1}</span>
-                            )}
-                          </div>
-                          <div className={styles.samplePhotoMeta}>
-                            <strong>Sample {index + 1}</strong>
-                            <label className={styles.samplePhotoChoose}>
-                              <input
-                                ref={(element) => {
-                                  sampleFileInputRefs.current[index] = element;
-                                }}
-                                type="file"
-                                accept="image/*"
-                                aria-label={`Choose sample photo ${index + 1}`}
-                                disabled={galleryLoading || isSaving}
-                                onChange={(event) =>
-                                  updateSampleFile(
-                                    index,
-                                    event.currentTarget.files?.[0] ?? null,
-                                  )
-                                }
-                              />
-                              {file
-                                ? "Replace selection"
-                                : savedPhoto
-                                  ? "Replace photo"
-                                  : "Choose photo"}
-                            </label>
-                            {(file || savedPhoto || isMarkedForRemoval) && (
-                              <div className={styles.samplePhotoSelection}>
-                                <small className={styles.samplePhotoFilename}>
-                                  {isMarkedForRemoval
-                                    ? "Will be removed when you save."
-                                    : file?.name || ""}
-                                </small>
-                                <button
-                                  className={styles.samplePhotoClear}
-                                  type="button"
-                                  disabled={isSaving}
-                                  onClick={() => {
-                                    if (isMarkedForRemoval) {
-                                      setDeletedSamplePhotoIds((ids) =>
-                                        ids.filter((id) => id !== savedPhoto._id),
-                                      );
-                                    } else if (file) {
-                                      updateSampleFile(index, null);
-                                    } else if (savedPhoto) {
-                                      setDeletedSamplePhotoIds((ids) => [
-                                        ...ids,
-                                        savedPhoto._id,
-                                      ]);
-                                    }
-                                    const input = sampleFileInputRefs.current[index];
-                                    if (input) input.value = "";
-                                  }}
-                                >
-                                  {isMarkedForRemoval
-                                    ? "Undo clear"
-                                    : file
-                                      ? "Clear selection"
-                                      : "Clear photo"}
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
-                  {galleryLoading && (
-                    <p className={styles.samplePhotoMessage} role="status">
-                      Loading saved sample photos...
-                    </p>
-                  )}
                 </section>
               )}
 
@@ -1987,17 +1910,28 @@ export default function ProfilePage() {
                             className={styles.savedMediaItem}
                             key={`${videoUrl}-${index}`}
                           >
-                            <video
-                              className={styles.savedProfileVideo}
-                              src={getGalleryImageUrl(videoUrl)}
-                              autoPlay
-                              controls
-                              loop
-                              muted
-                              playsInline
-                              preload="metadata"
-                            />
-                            <figcaption>Profile video {index + 1}</figcaption>
+                            { /\.(jpe?g|png|gif|webp)$/i.test(videoUrl) ? (
+                              <Image
+                                className={styles.savedPortfolioPhoto}
+                                src={getGalleryImageUrl(videoUrl)}
+                                alt={`Profile photo ${index + 1}`}
+                                width={640}
+                                height={440}
+                                unoptimized
+                              />
+                            ) : (
+                              <video
+                                className={styles.savedProfileVideo}
+                                src={getGalleryImageUrl(videoUrl)}
+                                autoPlay
+                                controls
+                                loop
+                                muted
+                                playsInline
+                                preload="metadata"
+                              />
+                            )}
+                            <figcaption>Profile media {index + 1}</figcaption>
                           </figure>
                         ))}
                     </div>
